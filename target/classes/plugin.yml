@@ -1,0 +1,28 @@
+name: DonutOrders
+version: '1.0.0'
+main: com.donutorders.DonutOrders
+api-version: '1.20'
+description: Player-driven buy-order marketplace.
+author: DonutOrders
+
+# Required so that Folia loads this plugin.
+# Without this flag Folia silently disables the plugin.
+folia-supported: true
+
+depend:
+  - Vault
+
+commands:
+  orders:
+    description: Open the orders marketplace.
+    usage: /orders
+    permission: donutorders.use
+    aliases: [order, market]
+
+permissions:
+  donutorders.use:
+    description: Allows players to use /orders.
+    default: true
+  donutorders.admin:
+    description: Allows admin sub-commands (reload).
+    default: op
