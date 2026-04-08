@@ -125,18 +125,22 @@
                                     <shadedPattern>com.donutorders.libs.hikari</shadedPattern>
                                 </relocation>
                                 <!--
-                                    Relocate SQLite JDBC driver and its native loader.
+                                    SQLite JDBC bundles native libraries (.dll/.so) whose
+                                    JNI symbols are hard-coded to the original org.sqlite
+                                    package path. Relocating the package breaks the JNI
+                                    lookup with UnsatisfiedLinkError, so we bundle it
+                                    without relocation.
                                 -->
-                                <relocation>
-                                    <pattern>org.sqlite</pattern>
-                                    <shadedPattern>com.donutorders.libs.sqlite</shadedPattern>
-                                </relocation>
                                 <!-- Relocate SLF4J to isolate logging from other plugins -->
                                 <relocation>
                                     <pattern>org.slf4j</pattern>
                                     <shadedPattern>com.donutorders.libs.slf4j</shadedPattern>
                                 </relocation>
                             </relocations>
+                            <transformers>
+                                <!-- Merge SLF4J service-provider files so HikariCP finds the shaded provider -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
                         </configuration>
                     </execution>
                 </executions>

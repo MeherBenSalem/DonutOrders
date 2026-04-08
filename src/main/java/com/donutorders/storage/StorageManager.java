@@ -80,7 +80,7 @@ public class StorageManager {
                 .getConfig().getString("database.filename", "donutorders.db"));
 
         HikariConfig cfg = new HikariConfig();
-        cfg.setDriverClassName("com.donutorders.libs.sqlite.JDBC");
+        cfg.setDriverClassName("org.sqlite.JDBC");
         cfg.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
 
         // SQLite must use pool size of exactly 1 to avoid write-lock contention.

@@ -81,9 +81,10 @@ public class GUIManager {
             PlayerGUIState state = new PlayerGUIState();
             state.type = GUIType.PUBLIC_ORDERS;
             state.gui  = gui;
-            states.put(player.getUniqueId(), state);
-
+            // State is set AFTER openInventory because openInventory fires
+            // InventoryCloseEvent synchronously, which calls clearState().
             player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
         }, null);
     }
 
@@ -96,9 +97,8 @@ public class GUIManager {
             PlayerGUIState state = new PlayerGUIState();
             state.type = GUIType.YOUR_ORDERS;
             state.gui  = gui;
-            states.put(player.getUniqueId(), state);
-
             player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
         }, null);
     }
 
@@ -110,9 +110,8 @@ public class GUIManager {
             PlayerGUIState state = new PlayerGUIState();
             state.type = GUIType.NEW_ORDER;
             state.gui  = gui;
-            states.put(player.getUniqueId(), state);
-
             player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
         }, null);
     }
 
@@ -129,9 +128,8 @@ public class GUIManager {
             state.gui             = gui;
             state.contextOrderId  = orderId;
             state.deliverySlots   = new ItemStack[45];
-            states.put(player.getUniqueId(), state);
-
             player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
         }, null);
     }
 
@@ -154,9 +152,8 @@ public class GUIManager {
             state.gui            = gui;
             state.contextOrderId = orderId;
             state.deliverySlots  = items;
-            states.put(player.getUniqueId(), state);
-
             player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
         }, null);
     }
 
@@ -174,9 +171,8 @@ public class GUIManager {
                 state.type           = GUIType.COLLECT_STASH;
                 state.gui            = gui;
                 state.contextOrderId = orderId;
-                states.put(player.getUniqueId(), state);
-
                 player.openInventory(gui.getInventory());
+                states.put(player.getUniqueId(), state);
             }, null);
         });
     }
@@ -201,9 +197,8 @@ public class GUIManager {
                 state.type           = GUIType.ORDER_DETAIL;
                 state.gui            = gui;
                 state.contextOrderId = orderId;
-                states.put(player.getUniqueId(), state);
-
                 player.openInventory(gui.getInventory());
+                states.put(player.getUniqueId(), state);
             }, null);
         });
     }
@@ -221,6 +216,15 @@ public class GUIManager {
     /** Removes GUI state for a player (called on inventory close / quit). */
     public void clearState(UUID playerUUID) {
         states.remove(playerUUID);
+    }
+
+    /**
+     * Registers a GUI state directly. Used when a GUI class opens a new
+     * inventory inline (e.g. pagination within the same GUI type) and needs
+     * to restore state after {@code openInventory} fires the close event.
+     */
+    public void setState(UUID playerUUID, PlayerGUIState state) {
+        states.put(playerUUID, state);
     }
 
     // ── Dependency accessors (used by GUI classes) ────────────────────────────

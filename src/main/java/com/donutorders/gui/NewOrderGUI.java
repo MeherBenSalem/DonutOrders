@@ -113,13 +113,14 @@ public class NewOrderGUI extends BaseGUI {
             return;
         }
         if (slot == SLOT_NEXT && page < maxPage) {
-            // Re-open with next page — GUIManager opens page 0; we need the paged variant
-            // Handled below as a direct open
             GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
             if (state != null) {
                 NewOrderGUI next = new NewOrderGUI(guiManager, page + 1);
                 state.gui = next;
+                // openInventory fires InventoryCloseEvent which calls clearState();
+                // re-register the state afterwards so the new page is protected.
                 player.openInventory(next.getInventory());
+                guiManager.setState(player.getUniqueId(), state);
             }
             return;
         }

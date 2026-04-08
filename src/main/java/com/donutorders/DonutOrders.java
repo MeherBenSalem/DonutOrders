@@ -10,6 +10,8 @@ import com.donutorders.manager.OrderManager;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -17,6 +19,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.logging.Level;
 
 /**
@@ -49,6 +52,7 @@ public class DonutOrders extends JavaPlugin {
 
     /** The loaded messages.yml configuration. */
     private FileConfiguration messages;
+    private boolean pluginReady;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -66,7 +70,7 @@ public class DonutOrders extends JavaPlugin {
         saveResourceIfAbsent("messages.yml");
         reloadMessages();
 
-        // Vault must be present to operate
+        // Vault must be present to operate.
         if (!setupEconomy()) {
             getLogger().severe("[DonutOrders] Vault economy not found! Disabling plugin.");
             getServer().getPluginManager().disablePlugin(this);
@@ -81,6 +85,10 @@ public class DonutOrders extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
+        // Register a temporary /orders handler immediately so the command
+        // does not fail during async startup or in degraded load states.
+        registerStartupOrdersCommand();
 
         // Load all persisted orders async, then complete enable on global thread
         storageManager.loadAll(this::completeEnable);
@@ -101,7 +109,10 @@ public class DonutOrders extends JavaPlugin {
             OrdersCommand executor = new OrdersCommand(guiManager);
             ordersCmd.setExecutor(executor);
             ordersCmd.setTabCompleter(executor);
+        } else {
+            getLogger().severe("[DonutOrders] /orders command was not found in plugin.yml.");
         }
+        pluginReady = true;
 
         // Register listeners
         var pm = getServer().getPluginManager();
@@ -119,6 +130,22 @@ public class DonutOrders extends JavaPlugin {
 
         getLogger().info("[DonutOrders] Enabled successfully. "
             + storageManager.getAllOrders().size() + " orders loaded.");
+    }
+
+    private void registerStartupOrdersCommand() {
+        var ordersCmd = getCommand("orders");
+        if (ordersCmd == null) {
+            getLogger().severe("[DonutOrders] /orders command was not found in plugin.yml.");
+            return;
+        }
+
+        ordersCmd.setExecutor((sender, command, label, args) -> {
+            sender.sendMessage(DonutOrders.colorize(
+                getMessages().getString("plugin-starting",
+                    "&eDonutOrders is still starting. Please try again in a moment.")));
+            return true;
+        });
+        ordersCmd.setTabCompleter((sender, command, alias, args) -> Collections.emptyList());
     }
 
     @Override

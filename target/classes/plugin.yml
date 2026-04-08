@@ -9,7 +9,7 @@ author: DonutOrders
 # Without this flag Folia silently disables the plugin.
 folia-supported: true
 
-depend:
+softdepend:
   - Vault
 
 commands:
