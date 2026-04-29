@@ -64,7 +64,10 @@ public class NewOrderGUI extends BaseGUI {
         List<Material> result = new ArrayList<>();
         for (String name : names) {
             try {
-                result.add(Material.valueOf(name.toUpperCase()));
+                Material material = Material.valueOf(name.toUpperCase());
+                if (material.isItem() && material != Material.AIR) {
+                    result.add(material);
+                }
             } catch (IllegalArgumentException ignored) {
                 // Invalid material name in config — skip
             }
