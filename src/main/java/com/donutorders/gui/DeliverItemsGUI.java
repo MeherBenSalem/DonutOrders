@@ -42,6 +42,14 @@ public class DeliverItemsGUI extends BaseGUI {
     private final GUIManager guiManager;
     private final Order order;
 
+    /**
+     * Set to {@code true} the moment the player clicks CONFIRM.
+     * Prevents {@link #returnItems} from handing items back to the player
+     * after the GUI transition to {@link ConfirmDeliveryGUI} fires
+     * {@code InventoryCloseEvent} and schedules a delayed returnItems call.
+     */
+    private volatile boolean confirmed = false;
+
     public DeliverItemsGUI(GUIManager guiManager, Order order) {
         super(Bukkit.createInventory(null, 54, "ᴅᴇʟɪᴠᴇʀ ɪᴛᴇᴍꜱ"));
         this.guiManager = guiManager;
@@ -110,6 +118,10 @@ public class DeliverItemsGUI extends BaseGUI {
      * Scans input slots, validates count, then opens ConfirmDeliveryGUI.
      */
     private void handleConfirm(Player player) {
+        // Lock FIRST — blocks returnItems() from returning items during the
+        // InventoryCloseEvent that fires when ConfirmDeliveryGUI opens.
+        confirmed = true;
+
         ItemStack[] inputSlots = new ItemStack[INPUT_SLOTS];
         int validCount = 0;
         for (int i = 0; i < INPUT_SLOTS; i++) {
@@ -122,14 +134,29 @@ public class DeliverItemsGUI extends BaseGUI {
         }
 
         if (validCount == 0) {
+            // Nothing valid — release the lock so the player can cancel normally
+            confirmed = false;
             player.sendMessage(com.donutorders.DonutOrders.colorize(
                 com.donutorders.DonutOrders.getInstance().getMessages()
                     .getString("delivery-no-items", "&cɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ.")));
             return;
         }
 
-        // Return items not used (excess over amountRemaining will be handled in OrderManager)
+        // Return excess items (beyond amountRemaining) to the player
         returnExcessItems(player, inputSlots);
+
+        // Clear ALL remaining input slots so that the InventoryCloseEvent triggered
+        // by opening ConfirmDeliveryGUI finds an empty GUI and returns nothing.
+        int clearedCount = 0;
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            if (inventory.getItem(i) != null) {
+                inventory.setItem(i, null);
+                clearedCount++;
+            }
+        }
+        com.donutorders.DonutOrders.getInstance().getLogger().info(
+            "[DonutOrders] DeliverItemsGUI confirmed for " + player.getName()
+            + " — cleared " + clearedCount + " GUI slots, snapshot item count: " + validCount);
 
         // Update delivery state and open confirmation
         GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
@@ -141,8 +168,15 @@ public class DeliverItemsGUI extends BaseGUI {
     /**
      * Returns all items from input slots back to the player.
      * Called when the player cancels or closes without confirming.
+     * No-op if {@link #handleConfirm} has already been called.
      */
     public void returnItems(Player player) {
+        if (confirmed) {
+            com.donutorders.DonutOrders.getInstance().getLogger().info(
+                "[DonutOrders] DeliverItemsGUI.returnItems skipped for " + player.getName()
+                + " — delivery already confirmed.");
+            return;
+        }
         for (int i = 0; i < INPUT_SLOTS; i++) {
             ItemStack item = inventory.getItem(i);
             if (item != null && item.getType() != Material.AIR) {

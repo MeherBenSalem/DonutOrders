@@ -1,6 +1,7 @@
 package com.donutorders.listener;
 
 import com.donutorders.gui.BaseGUI;
+import com.donutorders.gui.ConfirmDeliveryGUI;
 import com.donutorders.gui.DeliverItemsGUI;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.util.ItemUtils;
@@ -166,6 +167,12 @@ public class InventoryListener implements Listener {
             // Run on entity thread (we're already here, but future-proof with explicit scheduling)
             com.donutorders.scheduler.FoliaScheduler.runAtEntity(player,
                 () -> deliverGUI.returnItems(player), null);
+        } else if (state.type == GUIManager.GUIType.CONFIRM_DELIVERY
+                && state.gui instanceof ConfirmDeliveryGUI confirmGUI) {
+            // Player closed ConfirmDeliveryGUI without clicking Confirm or Cancel
+            // (e.g. pressed ESC). Return the item snapshot if not yet submitted.
+            com.donutorders.scheduler.FoliaScheduler.runAtEntity(player,
+                () -> confirmGUI.returnItems(player), null);
         }
 
         guiManager.clearState(player.getUniqueId());
