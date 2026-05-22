@@ -2,6 +2,7 @@ com\donutorders\model\OrderStatus.class
 com\donutorders\gui\ConfirmDeliveryGUI.class
 com\donutorders\manager\ChatInputHandler.class
 com\donutorders\gui\DeliverItemsGUI.class
+com\donutorders\listener\InventoryListener$PlayerInteractionState.class
 com\donutorders\util\ItemUtils.class
 com\donutorders\manager\ChatInputHandler$ChatSession.class
 com\donutorders\gui\PublicOrdersGUI.class

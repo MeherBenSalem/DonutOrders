@@ -5,6 +5,7 @@ import com.donutorders.gui.ConfirmDeliveryGUI;
 import com.donutorders.gui.DeliverItemsGUI;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.util.ItemUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -12,6 +13,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 /**
  * Routes inventory events to the correct GUI handler.
@@ -30,6 +36,13 @@ import org.bukkit.inventory.ItemStack;
 public class InventoryListener implements Listener {
 
     private final GUIManager guiManager;
+    private final Map<UUID, PlayerInteractionState> interactionStates = new ConcurrentHashMap<>();
+
+    private static class PlayerInteractionState {
+        int lastTick = -1;
+        int lastSlot = -1;
+        int interactionsThisTick = 0;
+    }
 
     public InventoryListener(GUIManager guiManager) {
         this.guiManager = guiManager;
@@ -44,71 +57,181 @@ public class InventoryListener implements Listener {
         GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
         if (state == null) return;
 
+        int currentTick = Bukkit.getCurrentTick();
+        PlayerInteractionState interactionState = interactionStates.computeIfAbsent(player.getUniqueId(), k -> new PlayerInteractionState());
+
+        if (interactionState.lastTick == currentTick) {
+            interactionState.interactionsThisTick++;
+        } else {
+            interactionState.lastTick = currentTick;
+            interactionState.interactionsThisTick = 1;
+        }
+
+        int slot = event.getSlot();
+
+        // 1. If a player exceeds 2 inventory interactions in a single tick, cancel and log
+        if (interactionState.interactionsThisTick > 2) {
+            event.setCancelled(true);
+            Bukkit.getLogger().log(Level.WARNING,
+                "[Security] Player {0} exceeded click rate limit ({1} clicks in tick {2}). Possible packet exploit.",
+                new Object[]{player.getName(), interactionState.interactionsThisTick, currentTick});
+            return;
+        }
+
+        // 2. If a player clicks the exact same slot multiple times in the same tick, cancel and log
+        if (interactionState.interactionsThisTick > 1 && interactionState.lastSlot == slot) {
+            event.setCancelled(true);
+            Bukkit.getLogger().log(Level.WARNING,
+                "[Security] Player {0} double-clicked slot {1} in the same tick ({2}). Possible packet replay/delay exploit.",
+                new Object[]{player.getName(), slot, currentTick});
+            return;
+        }
+
+        interactionState.lastSlot = slot;
+
         Inventory topInv = event.getView().getTopInventory();
         Inventory clickedInv = event.getClickedInventory();
 
-        // Always cancel interactions with OUR top inventory to prevent item theft
+        // ── DELIVER_ITEMS GUI (Fulfill Order) Selective Interaction ──────────
+        if (state.type == GUIManager.GUIType.DELIVER_ITEMS && state.gui instanceof DeliverItemsGUI deliverGUI) {
+            ItemStack template = deliverGUI.getOrder().getItemTemplate();
+            boolean isTopInv = clickedInv != null && clickedInv.equals(topInv);
+
+            if (!isTopInv) {
+                // Clicking in player's own bottom inventory
+                InventoryAction action = event.getAction();
+                if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+                    // Shift click from player inventory into the top GUI
+                    ItemStack current = event.getCurrentItem();
+                    if (current != null && current.getType() != org.bukkit.Material.AIR) {
+                        if (current.isSimilar(template)) {
+                            event.setCancelled(false);
+                        } else {
+                            event.setCancelled(true);
+                            player.sendMessage(com.donutorders.DonutOrders.colorize(
+                                com.donutorders.DonutOrders.getInstance().getMessages()
+                                    .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
+                                    .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                        }
+                    }
+                } else if (action == InventoryAction.COLLECT_TO_CURSOR) {
+                    // Double click: only allow collecting if the cursor item is similar to the template
+                    ItemStack cursor = event.getCursor();
+                    if (cursor != null && cursor.getType() != org.bukkit.Material.AIR) {
+                        if (cursor.isSimilar(template)) {
+                            event.setCancelled(false);
+                        } else {
+                            event.setCancelled(true);
+                        }
+                    }
+                } else {
+                    // Standard rearrangement/manipulation within player's own inventory
+                    event.setCancelled(false);
+                }
+                return;
+            }
+
+            // Clicking inside top GUI inventory
+            ItemStack clicked = event.getCurrentItem();
+            ClickType type = event.getClick();
+
+            if (slot >= DeliverItemsGUI.INPUT_SLOTS) {
+                // Protected slots (buttons & fillers)
+                event.setCancelled(true);
+                deliverGUI.handleClick(player, slot, clicked, type);
+                return;
+            }
+
+            // Input slots (0 - 44)
+            InventoryAction action = event.getAction();
+
+            // Allow pickups, drops, and shifting out from GUI input slots freely
+            if (action == InventoryAction.PICKUP_ALL
+                    || action == InventoryAction.PICKUP_HALF
+                    || action == InventoryAction.PICKUP_ONE
+                    || action == InventoryAction.PICKUP_SOME
+                    || action == InventoryAction.DROP_ALL_SLOT
+                    || action == InventoryAction.DROP_ONE_SLOT
+                    || action == InventoryAction.MOVE_TO_OTHER_INVENTORY
+                    || action == InventoryAction.COLLECT_TO_CURSOR) {
+                event.setCancelled(false);
+                return;
+            }
+
+            // Allow cursor placing / swapping only if the item matches order template
+            if (action == InventoryAction.PLACE_ALL
+                    || action == InventoryAction.PLACE_SOME
+                    || action == InventoryAction.PLACE_ONE
+                    || action == InventoryAction.SWAP_WITH_CURSOR) {
+                ItemStack cursor = event.getCursor();
+                if (cursor != null && cursor.getType() != org.bukkit.Material.AIR) {
+                    if (cursor.isSimilar(template)) {
+                        event.setCancelled(false);
+                    } else {
+                        event.setCancelled(true);
+                        player.sendMessage(com.donutorders.DonutOrders.colorize(
+                            com.donutorders.DonutOrders.getInstance().getMessages()
+                                .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
+                                .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                    }
+                }
+                return;
+            }
+
+            // Allow hotbar swaps only if the hotbar item matches order template
+            if (action == InventoryAction.HOTBAR_SWAP || action == InventoryAction.HOTBAR_MOVE_AND_READD) {
+                int hotbarSlot = event.getHotbarButton();
+                ItemStack hotbarItem = (hotbarSlot >= 0 && hotbarSlot < 9) ? player.getInventory().getItem(hotbarSlot) : null;
+                if (hotbarItem != null && hotbarItem.getType() != org.bukkit.Material.AIR) {
+                    if (hotbarItem.isSimilar(template)) {
+                        event.setCancelled(false);
+                    } else {
+                        event.setCancelled(true);
+                        player.sendMessage(com.donutorders.DonutOrders.colorize(
+                            com.donutorders.DonutOrders.getInstance().getMessages()
+                                .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
+                                .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                    }
+                } else {
+                    event.setCancelled(false);
+                }
+                return;
+            }
+
+            // Allow offhand swaps only if the offhand item matches order template
+            if (type == ClickType.SWAP_OFFHAND) {
+                ItemStack offhandItem = player.getInventory().getItemInOffHand();
+                if (offhandItem != null && offhandItem.getType() != org.bukkit.Material.AIR) {
+                    if (offhandItem.isSimilar(template)) {
+                        event.setCancelled(false);
+                    } else {
+                        event.setCancelled(true);
+                        player.sendMessage(com.donutorders.DonutOrders.colorize(
+                            com.donutorders.DonutOrders.getInstance().getMessages()
+                                .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
+                                .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                    }
+                } else {
+                    event.setCancelled(false);
+                }
+                return;
+            }
+
+            // Catch-all safety fallback for input slots
+            event.setCancelled(true);
+            return;
+        }
+
+        // ── STANDARD GUI DEFAULT LOCKDOWN ─────────────────────────────────────
         event.setCancelled(true);
 
         // Ignore clicks in the player's own bottom inventory
         if (clickedInv == null || !clickedInv.equals(topInv)) {
-            // Special case: shift-click from player inventory into DeliverItemsGUI
-            if (state.type == GUIManager.GUIType.DELIVER_ITEMS
-                    && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
-                    && clickedInv != null && clickedInv.equals(event.getView().getBottomInventory())) {
-
-                handleDeliveryShiftClick(event, player, state);
-            }
             return;
         }
 
-        int slot = event.getSlot();
         ItemStack clicked = event.getCurrentItem();
         ClickType type    = event.getClick();
-
-        // ── DeliverItemsGUI: material validation before routing to GUI ────────
-        if (state.type == GUIManager.GUIType.DELIVER_ITEMS
-                && state.gui instanceof DeliverItemsGUI deliverGUI) {
-
-            if (slot < DeliverItemsGUI.INPUT_SLOTS) {
-                // Player is placing a cursor item into an input slot
-                ItemStack cursor = event.getCursor();
-                if (cursor != null && cursor.getType().isItem()) {
-                    if (!ItemUtils.isSameMaterial(cursor, deliverGUI.getOrder().getItemTemplate())) {
-                        // Wrong material — reject (event already cancelled)
-                        player.sendMessage(com.donutorders.DonutOrders.colorize(
-                            com.donutorders.DonutOrders.getInstance().getMessages()
-                                .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
-                                .replace("{0}", ItemUtils.prettyName(
-                                    deliverGUI.getOrder().getItemTemplate().getType()))));
-                        return;
-                    }
-                    // Correct material: allow the placement
-                    event.setCancelled(false);
-                    return;
-                }
-                // Picking up an item from the slot is allowed (player changed their mind)
-                if (event.getAction() == InventoryAction.PICKUP_ALL
-                        || event.getAction() == InventoryAction.PICKUP_HALF
-                        || event.getAction() == InventoryAction.PICKUP_ONE
-                        || event.getAction() == InventoryAction.PICKUP_SOME
-                        || event.getAction() == InventoryAction.SWAP_WITH_CURSOR) {
-                    if (clicked != null && !ItemUtils.isSameMaterial(
-                            event.getCursor(), deliverGUI.getOrder().getItemTemplate())) {
-                        // If swapping in wrong item, block
-                        if (event.getAction() == InventoryAction.SWAP_WITH_CURSOR) {
-                            return;
-                        }
-                        // Pickup is fine
-                        event.setCancelled(false);
-                        return;
-                    }
-                    event.setCancelled(false);
-                    return;
-                }
-            }
-            // Bottom-row button clicks go to the GUI's handleClick as normal
-        }
 
         // Route the click to the GUI
         if (state.gui != null) {
@@ -138,9 +261,9 @@ public class InventoryListener implements Listener {
                         && state.gui instanceof DeliverItemsGUI deliverGUI
                         && rawSlot < DeliverItemsGUI.INPUT_SLOTS) {
 
-                    if (ItemUtils.isSameMaterial(event.getOldCursor(),
-                            deliverGUI.getOrder().getItemTemplate())) {
-                        // Correct material — allow this specific drag
+                    ItemStack oldCursor = event.getOldCursor();
+                    if (oldCursor != null && oldCursor.isSimilar(deliverGUI.getOrder().getItemTemplate())) {
+                        // Correct material and metadata — allow this specific drag
                         continue;
                     }
                 }
@@ -157,6 +280,8 @@ public class InventoryListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
+
+        interactionStates.remove(player.getUniqueId());
 
         GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
         if (state == null) return;
@@ -177,30 +302,5 @@ public class InventoryListener implements Listener {
 
         guiManager.clearState(player.getUniqueId());
     }
-
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    /**
-     * Handles a shift-click from the player's inventory into the DeliverItemsGUI.
-     * Only lets the item through if the material matches the order template.
-     */
-    private void handleDeliveryShiftClick(InventoryClickEvent event,
-                                          Player player,
-                                          GUIManager.PlayerGUIState state) {
-        if (!(state.gui instanceof DeliverItemsGUI deliverGUI)) return;
-
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || clicked.getType().isAir()) return;
-
-        if (ItemUtils.isSameMaterial(clicked, deliverGUI.getOrder().getItemTemplate())) {
-            // Allow the shift-click
-            event.setCancelled(false);
-        } else {
-            player.sendMessage(com.donutorders.DonutOrders.colorize(
-                com.donutorders.DonutOrders.getInstance().getMessages()
-                    .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
-                    .replace("{0}", ItemUtils.prettyName(
-                        deliverGUI.getOrder().getItemTemplate().getType()))));
-        }
-    }
 }
+

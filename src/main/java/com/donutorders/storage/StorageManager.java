@@ -119,13 +119,23 @@ public class StorageManager {
                 "  remaining_funds REAL NOT NULL," +
                 "  created_at      INTEGER NOT NULL," +
                 "  expires_at      INTEGER NOT NULL," +
-                "  status          TEXT NOT NULL" +
+                "  status          TEXT NOT NULL," +
+                "  claimed_at      INTEGER DEFAULT 0," +
+                "  claimed_by      TEXT DEFAULT NULL" +
                 ")");
             stmt.executeUpdate(
                 "CREATE TABLE IF NOT EXISTS order_stash (" +
                 "  order_id   TEXT PRIMARY KEY," +
                 "  stash_data TEXT NOT NULL" +
                 ")");
+
+            // Execute schema upgrades for existing installations
+            try {
+                stmt.executeUpdate("ALTER TABLE orders ADD COLUMN claimed_at INTEGER DEFAULT 0");
+            } catch (SQLException ignored) {}
+            try {
+                stmt.executeUpdate("ALTER TABLE orders ADD COLUMN claimed_by TEXT DEFAULT NULL");
+            } catch (SQLException ignored) {}
         }
     }
 
@@ -173,7 +183,7 @@ public class StorageManager {
                 "INSERT OR REPLACE INTO orders " +
                 "(order_id, buyer_uuid, buyer_name, item_data, amount_req, " +
                 " amount_filled, price_per_item, remaining_funds, created_at, " +
-                " expires_at, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+                " expires_at, status, claimed_at, claimed_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 bindOrder(ps, order);
@@ -197,14 +207,16 @@ public class StorageManager {
         FoliaScheduler.runAsync(() -> {
             final String sql =
                 "UPDATE orders SET " +
-                "  amount_filled=?, remaining_funds=?, status=? " +
+                "  amount_filled=?, remaining_funds=?, status=?, claimed_at=?, claimed_by=? " +
                 "WHERE order_id=?";
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, order.getAmountFulfilled());
                 ps.setDouble(2, order.getRemainingFunds());
                 ps.setString(3, order.getStatus().name());
-                ps.setString(4, order.getOrderId().toString());
+                ps.setLong(4, order.getClaimedAt());
+                ps.setString(5, order.getClaimedBy() != null ? order.getClaimedBy().toString() : null);
+                ps.setString(6, order.getOrderId().toString());
                 ps.executeUpdate();
             } catch (SQLException e) {
                 LOG.log(Level.SEVERE, "Failed to update order " + order.getOrderId(), e);
@@ -368,6 +380,8 @@ public class StorageManager {
         ps.setLong(9, o.getCreatedAt());
         ps.setLong(10, o.getExpiresAt());
         ps.setString(11, o.getStatus().name());
+        ps.setLong(12, o.getClaimedAt());
+        ps.setString(13, o.getClaimedBy() != null ? o.getClaimedBy().toString() : null);
     }
 
     /** Converts a ResultSet row to an Order. Returns null on parse failure. */
@@ -387,9 +401,13 @@ public class StorageManager {
             long expiresAt   = rs.getLong("expires_at");
             OrderStatus status = OrderStatus.valueOf(rs.getString("status"));
 
+            long claimedAt   = rs.getLong("claimed_at");
+            String claimedByStr = rs.getString("claimed_by");
+            UUID claimedBy = (claimedByStr != null && !claimedByStr.isEmpty()) ? UUID.fromString(claimedByStr) : null;
+
             return new Order(orderId, buyerUUID, buyerName, template,
                     amountReq, amountFilled, price, funds,
-                    createdAt, expiresAt, status);
+                    createdAt, expiresAt, status, claimedAt, claimedBy);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Failed to parse order row", e);
             return null;

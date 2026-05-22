@@ -62,7 +62,7 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     private int countDelivery(ItemStack[] slots, Order o) {
         int total = 0;
         for (ItemStack item : slots) {
-            if (ItemUtils.isSameMaterial(item, o.getItemTemplate()) && item != null) {
+            if (item != null && item.isSimilar(o.getItemTemplate())) {
                 total += item.getAmount();
             }
         }

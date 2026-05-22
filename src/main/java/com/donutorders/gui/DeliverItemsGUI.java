@@ -126,8 +126,7 @@ public class DeliverItemsGUI extends BaseGUI {
         int validCount = 0;
         for (int i = 0; i < INPUT_SLOTS; i++) {
             ItemStack item = inventory.getItem(i);
-            if (ItemUtils.isSameMaterial(item, order.getItemTemplate())
-                    && item != null) {
+            if (item != null && item.isSimilar(order.getItemTemplate())) {
                 inputSlots[i] = item.clone();
                 validCount += item.getAmount();
             }

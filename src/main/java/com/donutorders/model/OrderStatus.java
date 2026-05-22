@@ -14,5 +14,7 @@ public enum OrderStatus {
     ACTIVE,
     COMPLETED,
     EXPIRED,
-    CANCELLED
+    CANCELLED,
+    PENDING,
+    CLAIMED
 }
