@@ -2,6 +2,10 @@
 #  DonutOrders  –  config.yml
 # ─────────────────────────────────────────────────────────────────────────────
 
+update-check:
+  # Check Modrinth for a newer release when the plugin starts.
+  enabled: true
+
 orders:
   # Maximum simultaneous active orders a single player can hold.
   max-per-player: 10

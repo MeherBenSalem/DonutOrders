@@ -1,3 +1,4 @@
+com\donutorders\listener\PlayerJoinListener.class
 com\donutorders\model\OrderStatus.class
 com\donutorders\gui\ConfirmDeliveryGUI.class
 com\donutorders\manager\ChatInputHandler.class
@@ -6,7 +7,9 @@ com\donutorders\listener\InventoryListener$PlayerInteractionState.class
 com\donutorders\util\ItemUtils.class
 com\donutorders\manager\ChatInputHandler$ChatSession.class
 com\donutorders\gui\PublicOrdersGUI.class
+com\donutorders\listener\LuckPermsLimitListener.class
 com\donutorders\gui\BaseGUI.class
+com\donutorders\manager\OrderLimitManager$ResolvedLimit.class
 com\donutorders\listener\InventoryListener.class
 com\donutorders\gui\OrderDetailGUI.class
 com\donutorders\manager\GUIManager$PlayerGUIState.class
@@ -15,6 +18,7 @@ com\donutorders\storage\StorageManager.class
 com\donutorders\util\NumberFormatter.class
 com\donutorders\model\Order.class
 com\donutorders\manager\GUIManager.class
+com\donutorders\manager\OrderLimitManager.class
 com\donutorders\gui\OrderDetailGUI$1.class
 com\donutorders\gui\CollectStashGUI.class
 com\donutorders\gui\YourOrdersGUI.class
@@ -25,4 +29,6 @@ com\donutorders\command\OrdersCommand.class
 com\donutorders\scheduler\FoliaScheduler.class
 com\donutorders\listener\PlayerQuitListener.class
 com\donutorders\DonutOrders.class
+com\donutorders\placeholder\DonutOrdersExpansion.class
 com\donutorders\listener\ChatListener.class
+com\donutorders\util\ModrinthUpdateChecker.class

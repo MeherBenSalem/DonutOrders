@@ -9,6 +9,7 @@ import com.donutorders.manager.GUIManager;
 import com.donutorders.manager.OrderManager;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
+import com.donutorders.util.ModrinthUpdateChecker;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.TabCompleter;
@@ -130,6 +131,8 @@ public class DonutOrders extends JavaPlugin {
 
         getLogger().info("[DonutOrders] Enabled successfully. "
             + storageManager.getAllOrders().size() + " orders loaded.");
+
+        ModrinthUpdateChecker.checkAsync(this);
     }
 
     private void registerStartupOrdersCommand() {
