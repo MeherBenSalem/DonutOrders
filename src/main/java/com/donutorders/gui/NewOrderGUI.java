@@ -1,23 +1,22 @@
 package com.donutorders.gui;
 
 import com.donutorders.DonutOrders;
+import com.donutorders.manager.AllowedItemsManager;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.util.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * GUI: "ɴᴇᴡ ᴏʀᴅᴇʀ" — item picker for creating a buy order.
  *
- * <p>Displays the materials listed under {@code allowed-materials} in config.yml.
+ * <p>Displays the materials listed in {@code items.yml}.
  * Clicking a material closes the GUI and starts the chat-input flow
  * (amount → price).
  *
@@ -59,17 +58,11 @@ public class NewOrderGUI extends BaseGUI {
     }
 
     private List<Material> loadAllowedMaterials() {
-        FileConfiguration config = DonutOrders.getInstance().getConfig();
-        List<String> names = config.getStringList("allowed-materials");
-        List<Material> result = new ArrayList<>();
-        for (String name : names) {
-            try {
-                result.add(Material.valueOf(name.toUpperCase()));
-            } catch (IllegalArgumentException ignored) {
-                // Invalid material name in config — skip
-            }
+        AllowedItemsManager itemsManager = DonutOrders.getInstance().getAllowedItemsManager();
+        if (itemsManager == null) {
+            return List.of();
         }
-        return result;
+        return itemsManager.getAllowedMaterials();
     }
 
     private void build() {

@@ -4,6 +4,7 @@ import com.donutorders.gui.BaseGUI;
 import com.donutorders.gui.ConfirmDeliveryGUI;
 import com.donutorders.gui.DeliverItemsGUI;
 import com.donutorders.manager.GUIManager;
+import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -104,7 +105,7 @@ public class InventoryListener implements Listener {
                     // Shift click from player inventory into the top GUI
                     ItemStack current = event.getCurrentItem();
                     if (current != null && current.getType() != org.bukkit.Material.AIR) {
-                        if (current.isSimilar(template)) {
+                        if (DeliveryItemUtils.isDeliverablePlacement(current, template)) {
                             event.setCancelled(false);
                         } else {
                             event.setCancelled(true);
@@ -118,7 +119,7 @@ public class InventoryListener implements Listener {
                     // Double click: only allow collecting if the cursor item is similar to the template
                     ItemStack cursor = event.getCursor();
                     if (cursor != null && cursor.getType() != org.bukkit.Material.AIR) {
-                        if (cursor.isSimilar(template)) {
+                        if (DeliveryItemUtils.isDeliverablePlacement(cursor, template)) {
                             event.setCancelled(false);
                         } else {
                             event.setCancelled(true);
@@ -165,7 +166,7 @@ public class InventoryListener implements Listener {
                     || action == InventoryAction.SWAP_WITH_CURSOR) {
                 ItemStack cursor = event.getCursor();
                 if (cursor != null && cursor.getType() != org.bukkit.Material.AIR) {
-                    if (cursor.isSimilar(template)) {
+                    if (DeliveryItemUtils.isDeliverablePlacement(cursor, template)) {
                         event.setCancelled(false);
                     } else {
                         event.setCancelled(true);
@@ -183,7 +184,7 @@ public class InventoryListener implements Listener {
                 int hotbarSlot = event.getHotbarButton();
                 ItemStack hotbarItem = (hotbarSlot >= 0 && hotbarSlot < 9) ? player.getInventory().getItem(hotbarSlot) : null;
                 if (hotbarItem != null && hotbarItem.getType() != org.bukkit.Material.AIR) {
-                    if (hotbarItem.isSimilar(template)) {
+                    if (DeliveryItemUtils.isDeliverablePlacement(hotbarItem, template)) {
                         event.setCancelled(false);
                     } else {
                         event.setCancelled(true);
@@ -202,7 +203,7 @@ public class InventoryListener implements Listener {
             if (type == ClickType.SWAP_OFFHAND) {
                 ItemStack offhandItem = player.getInventory().getItemInOffHand();
                 if (offhandItem != null && offhandItem.getType() != org.bukkit.Material.AIR) {
-                    if (offhandItem.isSimilar(template)) {
+                    if (DeliveryItemUtils.isDeliverablePlacement(offhandItem, template)) {
                         event.setCancelled(false);
                     } else {
                         event.setCancelled(true);
@@ -262,7 +263,8 @@ public class InventoryListener implements Listener {
                         && rawSlot < DeliverItemsGUI.INPUT_SLOTS) {
 
                     ItemStack oldCursor = event.getOldCursor();
-                    if (oldCursor != null && oldCursor.isSimilar(deliverGUI.getOrder().getItemTemplate())) {
+                    if (oldCursor != null && DeliveryItemUtils.isDeliverablePlacement(
+                            oldCursor, deliverGUI.getOrder().getItemTemplate())) {
                         // Correct material and metadata — allow this specific drag
                         continue;
                     }

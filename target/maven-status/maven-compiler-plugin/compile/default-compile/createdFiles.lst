@@ -1,5 +1,6 @@
 com\donutorders\listener\PlayerJoinListener.class
 com\donutorders\model\OrderStatus.class
+com\donutorders\manager\AllowedItemsManager.class
 com\donutorders\gui\ConfirmDeliveryGUI.class
 com\donutorders\manager\ChatInputHandler.class
 com\donutorders\gui\DeliverItemsGUI.class
@@ -19,6 +20,7 @@ com\donutorders\util\NumberFormatter.class
 com\donutorders\model\Order.class
 com\donutorders\manager\GUIManager.class
 com\donutorders\manager\OrderLimitManager.class
+com\donutorders\util\DeliveryItemUtils.class
 com\donutorders\gui\OrderDetailGUI$1.class
 com\donutorders\gui\CollectStashGUI.class
 com\donutorders\gui\YourOrdersGUI.class

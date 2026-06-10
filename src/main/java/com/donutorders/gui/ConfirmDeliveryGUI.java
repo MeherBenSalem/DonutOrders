@@ -3,6 +3,7 @@ package com.donutorders.gui;
 import com.donutorders.DonutOrders;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
+import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
 import com.donutorders.util.NumberFormatter;
 import org.bukkit.Bukkit;
@@ -38,6 +39,7 @@ public class ConfirmDeliveryGUI extends BaseGUI {
 
     private final GUIManager guiManager;
     private final Order order;
+    private final Player seller;
     private final ItemStack[] items;   // snapshot from DeliverItemsGUI
     private final int deliverCount;
     private final double payout;
@@ -49,24 +51,17 @@ public class ConfirmDeliveryGUI extends BaseGUI {
      */
     private volatile boolean submitted = false;
 
-    public ConfirmDeliveryGUI(GUIManager guiManager, Order order, ItemStack[] items) {
+    public ConfirmDeliveryGUI(GUIManager guiManager, Player seller, Order order, ItemStack[] items) {
         super(Bukkit.createInventory(null, 27, "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ"));
         this.guiManager    = guiManager;
+        this.seller        = seller;
         this.order         = order;
         this.items         = items;
-        this.deliverCount  = countDelivery(items, order);
+        this.deliverCount  = Math.min(
+                DeliveryItemUtils.countAvailable(seller, items, order.getItemTemplate()),
+                order.getAmountRemaining());
         this.payout        = order.getPricePerItem() * deliverCount;
         build();
-    }
-
-    private int countDelivery(ItemStack[] slots, Order o) {
-        int total = 0;
-        for (ItemStack item : slots) {
-            if (item != null && item.isSimilar(o.getItemTemplate())) {
-                total += item.getAmount();
-            }
-        }
-        return Math.min(total, o.getAmountRemaining());
     }
 
     private void build() {

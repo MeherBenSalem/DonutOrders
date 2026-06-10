@@ -5,6 +5,7 @@ import com.donutorders.model.Order;
 import com.donutorders.model.OrderStatus;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
+import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
 import com.donutorders.util.NumberFormatter;
 import net.milkbowl.vault.economy.Economy;
@@ -90,6 +91,16 @@ public class OrderManager {
                     () -> callback.accept(false,
                             "ᴍᴀx ᴏʀᴅᴇʀ ʟɪᴍɪᴛ: " + maxOrders),
                     () -> callback.accept(false, "ᴍᴀx ᴏʀᴅᴇʀ ʟɪᴍɪᴛ"));
+            return;
+        }
+
+        AllowedItemsManager itemsManager = DonutOrders.getInstance().getAllowedItemsManager();
+        if (itemsManager == null
+                || itemTemplate == null
+                || !itemsManager.isAllowed(itemTemplate.getType())) {
+            FoliaScheduler.runAtEntity(buyer,
+                    () -> callback.accept(false, "ɪᴛᴇᴍ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ"),
+                    () -> callback.accept(false, "ɪᴛᴇᴍ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ"));
             return;
         }
 
@@ -186,15 +197,12 @@ public class OrderManager {
             return;
         }
 
-        // Count valid items (correct material, up to remaining amount)
+        // Count valid items (loose GUI stacks + shulker contents)
         int amountNeeded = order.getAmountRemaining();
-        int validCount = 0;
-        for (ItemStack item : items) {
-            if (item != null && item.isSimilar(order.getItemTemplate())) {
-                validCount += item.getAmount();
-            }
-        }
-        validCount = Math.min(validCount, amountNeeded);
+        ItemStack template = order.getItemTemplate();
+        int validCount = Math.min(
+                DeliveryItemUtils.countAvailable(seller, items, template),
+                amountNeeded);
 
         if (validCount == 0) {
             FoliaScheduler.runAtEntity(seller,
@@ -211,30 +219,45 @@ public class OrderManager {
             return;
         }
 
-        final int finalValidCount = validCount;
-
         // All economy and inventory work MUST occur on the seller's region thread.
         FoliaScheduler.runAtEntity(seller, () -> {
             try {
-                double payout = order.getPricePerItem() * finalValidCount;
+                int deliverCount = Math.min(
+                        DeliveryItemUtils.countAvailable(seller, items, template),
+                        amountNeeded);
+                if (deliverCount == 0) {
+                    callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ");
+                    return;
+                }
+
+                ItemStack[] stashItems = DeliveryItemUtils.extract(
+                        seller, items, template, deliverCount);
+                int extractedCount = 0;
+                for (ItemStack stashItem : stashItems) {
+                    if (stashItem != null) {
+                        extractedCount += stashItem.getAmount();
+                    }
+                }
+                if (extractedCount == 0) {
+                    callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ");
+                    return;
+                }
+
+                double payout = order.getPricePerItem() * extractedCount;
 
                 // Pay the seller
                 economy.depositPlayer(seller, payout);
 
                 // Update order in memory
-                order.setAmountFulfilled(order.getAmountFulfilled() + finalValidCount);
+                order.setAmountFulfilled(order.getAmountFulfilled() + extractedCount);
                 order.setRemainingFunds(order.getRemainingFunds() - payout);
 
-                boolean nowComplete = order.isFullyFulfilled();
-                if (nowComplete) {
+                if (order.isFullyFulfilled()) {
                     order.setStatus(OrderStatus.PENDING);
                 }
 
-                // Collect the exactly-used items into the stash.
-                // We add ONLY up to validCount items to the stash, discarding excess
-                // matching items back to the seller (or keeping them in their inv).
-                ItemStack[] stashItems = buildDeliveryStash(items, order.getItemTemplate(),
-                        finalValidCount);
+                // Return shulker boxes from the GUI snapshot (contents already extracted)
+                DeliveryItemUtils.returnSnapshotShulkers(seller, items);
 
                 // Persist order update first, then stash
                 storage.updateOrder(order, () ->
@@ -449,26 +472,6 @@ public class OrderManager {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
-
-    /**
-     * Extracts exactly {@code needed} items (matching template) from the
-     * delivery GUI slot array into a flat ItemStack array for the stash.
-     */
-    private ItemStack[] buildDeliveryStash(ItemStack[] guiSlots, ItemStack template, int needed) {
-        List<ItemStack> result = new ArrayList<>();
-        int remaining = needed;
-        for (ItemStack slot : guiSlots) {
-            if (remaining <= 0) break;
-            if (slot != null && slot.isSimilar(template)) {
-                int take = Math.min(slot.getAmount(), remaining);
-                ItemStack copy = slot.clone();
-                copy.setAmount(take);
-                result.add(copy);
-                remaining -= take;
-            }
-        }
-        return result.toArray(new ItemStack[0]);
-    }
 
     /**
      * Merges new delivery items into the existing stash array, filling empty

@@ -2,6 +2,7 @@ package com.donutorders.gui;
 
 import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
+import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
 import com.donutorders.util.NumberFormatter;
 import org.bukkit.Bukkit;
@@ -69,7 +70,9 @@ public class DeliverItemsGUI extends BaseGUI {
                 "§7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: §a" + NumberFormatter.formatPrice(order.getPricePerItem()),
                 "§8━━━━━━━━━━━━━━━━━━━━",
                 "§7ᴘʟᴀᴄᴇ §f" + ItemUtils.prettyName(order.getItemTemplate().getType())
-                    + " §7ɪɴ ᴛʜᴇ ꜱʟᴏᴛꜱ ᴀʙᴏᴠᴇ.")));
+                    + " §7ɪɴ ᴛʜᴇ ꜱʟᴏᴛꜱ ᴀʙᴏᴠᴇ.",
+                "§7ꜱʜᴜʟᴋᴇʀ ʙᴏxᴇꜱ ᴡɪᴛʜ ᴍᴀᴛᴄʜɪɴɢ",
+                "§7ɪᴛᴇᴍꜱ ᴀʀᴇ ᴀʟꜱᴏ ꜱᴜᴘᴘᴏʀᴛᴇᴅ.")));
 
         inventory.setItem(SLOT_CONFIRM, ItemUtils.createGuiItem(
             Material.LIME_WOOL,
@@ -123,14 +126,21 @@ public class DeliverItemsGUI extends BaseGUI {
         confirmed = true;
 
         ItemStack[] inputSlots = new ItemStack[INPUT_SLOTS];
-        int validCount = 0;
         for (int i = 0; i < INPUT_SLOTS; i++) {
             ItemStack item = inventory.getItem(i);
-            if (item != null && item.isSimilar(order.getItemTemplate())) {
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+            if (item.isSimilar(order.getItemTemplate())) {
                 inputSlots[i] = item.clone();
-                validCount += item.getAmount();
+            } else if (DeliveryItemUtils.isShulkerBox(item)
+                    && DeliveryItemUtils.shulkerContainsDeliverable(item, order.getItemTemplate())) {
+                inputSlots[i] = item.clone();
             }
         }
+
+        int validCount = DeliveryItemUtils.countAvailable(
+                player, inputSlots, order.getItemTemplate());
 
         if (validCount == 0) {
             // Nothing valid — release the lock so the player can cancel normally
@@ -195,7 +205,9 @@ public class DeliverItemsGUI extends BaseGUI {
         int counted = 0;
         for (int i = 0; i < snapshot.length; i++) {
             ItemStack item = snapshot[i];
-            if (item == null) continue;
+            if (item == null || DeliveryItemUtils.isShulkerBox(item)) {
+                continue;
+            }
             if (counted >= needed) {
                 // Return this entire stack
                 var overflow = player.getInventory().addItem(item);
