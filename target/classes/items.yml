@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  DonutOrders  –  items.yml
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Materials players may create buy orders for.
+# Use UPPERCASE Bukkit Material names (e.g. DIAMOND, WHEAT).
+# Invalid names are skipped on load and logged as warnings.
+#
+# Edit this file and run /orders admin reload to apply changes.
+
+allowed-items:
+  - DIAMOND
+  - EMERALD
+  - GOLD_INGOT
+  - IRON_INGOT
+  - NETHERITE_INGOT
+  - COAL
+  - LAPIS_LAZULI
+  - REDSTONE
+  - QUARTZ
+  - AMETHYST_SHARD
+  - GLOWSTONE_DUST
+  - BLAZE_ROD
+  - ENDER_PEARL
+  - GHAST_TEAR
+  - NETHER_STAR
+  - ELYTRA
+  - TOTEM_OF_UNDYING
+  - SHULKER_SHELL
+  - HEART_OF_THE_SEA
+  - TRIDENT
+  - OAK_LOG
+  - SPRUCE_LOG
+  - BIRCH_LOG
+  - JUNGLE_LOG
+  - ACACIA_LOG
+  - DARK_OAK_LOG
+  - MANGROVE_LOG
+  - CHERRY_LOG
+  - WHEAT
+  - CARROT
+  - POTATO
+  - BEETROOT
+  - SUGAR_CANE
+  - PUMPKIN
+  - MELON_SLICE
+  - LEATHER
+  - RABBIT_HIDE
+  - BONE_MEAL
+  - STRING
+  - FEATHER
+  - COBBLESTONE

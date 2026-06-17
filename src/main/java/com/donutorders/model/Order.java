@@ -52,6 +52,9 @@ public class Order {
     private final long expiresAt;
     private volatile OrderStatus status;
 
+    private volatile long claimedAt;
+    private volatile UUID claimedBy;
+
     // ── Anti-duplication lock (transient — not persisted) ─────────────────────
 
     /**
@@ -62,7 +65,12 @@ public class Order {
      */
     private final transient AtomicBoolean processingDelivery = new AtomicBoolean(false);
 
-    // ── Constructor ───────────────────────────────────────────────────────────
+    /**
+     * Set to {@code true} by the stash collection flow. Prevents concurrent stash claims.
+     */
+    private final transient AtomicBoolean processingClaim = new AtomicBoolean(false);
+
+    // ── Constructors ──────────────────────────────────────────────────────────
 
     public Order(UUID orderId,
                  UUID buyerUUID,
@@ -75,6 +83,23 @@ public class Order {
                  long createdAt,
                  long expiresAt,
                  OrderStatus status) {
+        this(orderId, buyerUUID, buyerName, itemTemplate, amountRequested, amountFulfilled,
+             pricePerItem, remainingFunds, createdAt, expiresAt, status, 0L, null);
+    }
+
+    public Order(UUID orderId,
+                 UUID buyerUUID,
+                 String buyerName,
+                 ItemStack itemTemplate,
+                 int amountRequested,
+                 int amountFulfilled,
+                 double pricePerItem,
+                 double remainingFunds,
+                 long createdAt,
+                 long expiresAt,
+                 OrderStatus status,
+                 long claimedAt,
+                 UUID claimedBy) {
         this.orderId = orderId;
         this.buyerUUID = buyerUUID;
         this.buyerName = buyerName;
@@ -86,6 +111,8 @@ public class Order {
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
         this.status = status;
+        this.claimedAt = claimedAt;
+        this.claimedBy = claimedBy;
     }
 
     // ── Derived helpers ───────────────────────────────────────────────────────
@@ -135,6 +162,21 @@ public class Order {
         processingDelivery.set(false);
     }
 
+    /**
+     * Attempts to acquire the claim lock via a compare-and-set.
+     *
+     * @return {@code true} if this thread successfully locked claim;
+     *         {@code false} if another thread is already claiming this order
+     */
+    public boolean tryLockClaim() {
+        return processingClaim.compareAndSet(false, true);
+    }
+
+    /** Releases the claim lock. */
+    public void unlockClaim() {
+        processingClaim.set(false);
+    }
+
     // ── Getters ───────────────────────────────────────────────────────────────
 
     public UUID getOrderId()           { return orderId; }
@@ -148,6 +190,8 @@ public class Order {
     public long getCreatedAt()         { return createdAt; }
     public long getExpiresAt()         { return expiresAt; }
     public OrderStatus getStatus()     { return status; }
+    public long getClaimedAt()         { return claimedAt; }
+    public UUID getClaimedBy()         { return claimedBy; }
 
     // ── Setters (package-internal mutation — always followed by a DB write) ────
 
@@ -161,5 +205,13 @@ public class Order {
 
     public void setStatus(OrderStatus status) {
         this.status = status;
+    }
+
+    public void setClaimedAt(long claimedAt) {
+        this.claimedAt = claimedAt;
+    }
+
+    public void setClaimedBy(UUID claimedBy) {
+        this.claimedBy = claimedBy;
     }
 }

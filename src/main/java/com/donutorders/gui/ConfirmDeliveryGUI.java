@@ -3,6 +3,7 @@ package com.donutorders.gui;
 import com.donutorders.DonutOrders;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
+import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
 import com.donutorders.util.NumberFormatter;
 import org.bukkit.Bukkit;
@@ -38,28 +39,29 @@ public class ConfirmDeliveryGUI extends BaseGUI {
 
     private final GUIManager guiManager;
     private final Order order;
+    private final Player seller;
     private final ItemStack[] items;   // snapshot from DeliverItemsGUI
     private final int deliverCount;
     private final double payout;
 
-    public ConfirmDeliveryGUI(GUIManager guiManager, Order order, ItemStack[] items) {
+    /**
+     * Set to {@code true} the moment {@code fulfillOrder} is dispatched.
+     * Guards {@link #returnItems} against returning the snapshot items
+     * after the transaction has already been submitted to {@code OrderManager}.
+     */
+    private volatile boolean submitted = false;
+
+    public ConfirmDeliveryGUI(GUIManager guiManager, Player seller, Order order, ItemStack[] items) {
         super(Bukkit.createInventory(null, 27, "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ"));
         this.guiManager    = guiManager;
+        this.seller        = seller;
         this.order         = order;
         this.items         = items;
-        this.deliverCount  = countDelivery(items, order);
+        this.deliverCount  = Math.min(
+                DeliveryItemUtils.countAvailable(seller, items, order.getItemTemplate()),
+                order.getAmountRemaining());
         this.payout        = order.getPricePerItem() * deliverCount;
         build();
-    }
-
-    private int countDelivery(ItemStack[] slots, Order o) {
-        int total = 0;
-        for (ItemStack item : slots) {
-            if (ItemUtils.isSameMaterial(item, o.getItemTemplate()) && item != null) {
-                total += item.getAmount();
-            }
-        }
-        return Math.min(total, o.getAmountRemaining());
     }
 
     private void build() {
@@ -87,6 +89,10 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     @Override
     public void handleClick(Player player, int slot, ItemStack clicked, ClickType type) {
         if (slot == SLOT_CONFIRM) {
+            submitted = true;
+            DonutOrders.getInstance().getLogger().info(
+                "[DonutOrders] ConfirmDeliveryGUI submitted by " + player.getName()
+                + " — dispatching fulfillOrder for " + deliverCount + " items.");
             guiManager.getOrderManager().fulfillOrder(player, order.getOrderId(), items,
                 (success, errorMsg) -> {
                     if (success) {
@@ -105,7 +111,32 @@ public class ConfirmDeliveryGUI extends BaseGUI {
                     guiManager.openPublicOrders(player, 0);
                 });
         } else if (slot == SLOT_CANCEL) {
+            returnItems(player);
             guiManager.openPublicOrders(player, 0);
+        }
+    }
+
+    /**
+     * Returns the item snapshot to the player's inventory.
+     * Called on CANCEL click and when the GUI is closed without confirming.
+     * No-op if {@link #submitted} is {@code true} — items are already in transit
+     * to the order stash and must not be duplicated.
+     */
+    public void returnItems(Player player) {
+        if (submitted) {
+            DonutOrders.getInstance().getLogger().info(
+                "[DonutOrders] ConfirmDeliveryGUI.returnItems skipped for "
+                + player.getName() + " — delivery already submitted.");
+            return;
+        }
+        DonutOrders.getInstance().getLogger().info(
+            "[DonutOrders] ConfirmDeliveryGUI.returnItems — returning snapshot to "
+            + player.getName());
+        for (ItemStack item : items) {
+            if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
+            var overflow = player.getInventory().addItem(item.clone());
+            overflow.values().forEach(drop ->
+                player.getWorld().dropItemNaturally(player.getLocation(), drop));
         }
     }
 }

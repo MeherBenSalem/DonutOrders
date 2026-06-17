@@ -4,11 +4,13 @@ import com.donutorders.command.OrdersCommand;
 import com.donutorders.listener.ChatListener;
 import com.donutorders.listener.InventoryListener;
 import com.donutorders.listener.PlayerQuitListener;
+import com.donutorders.manager.AllowedItemsManager;
 import com.donutorders.manager.ChatInputHandler;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.manager.OrderManager;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
+import com.donutorders.util.ModrinthUpdateChecker;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.TabCompleter;
@@ -47,8 +49,9 @@ public class DonutOrders extends JavaPlugin {
     private Economy           economy;
     private StorageManager    storageManager;
     private OrderManager      orderManager;
-    private ChatInputHandler  chatInputHandler;
-    private GUIManager        guiManager;
+    private ChatInputHandler     chatInputHandler;
+    private GUIManager           guiManager;
+    private AllowedItemsManager  allowedItemsManager;
 
     /** The loaded messages.yml configuration. */
     private FileConfiguration messages;
@@ -99,6 +102,9 @@ public class DonutOrders extends JavaPlugin {
      * Initialises managers, registers commands and listeners, starts tasks.
      */
     private void completeEnable() {
+        allowedItemsManager = new AllowedItemsManager(this);
+        allowedItemsManager.reload();
+
         chatInputHandler = new ChatInputHandler();
         orderManager     = new OrderManager(storageManager, economy);
         guiManager       = new GUIManager(storageManager, orderManager, chatInputHandler);
@@ -130,6 +136,8 @@ public class DonutOrders extends JavaPlugin {
 
         getLogger().info("[DonutOrders] Enabled successfully. "
             + storageManager.getAllOrders().size() + " orders loaded.");
+
+        ModrinthUpdateChecker.checkAsync(this);
     }
 
     private void registerStartupOrdersCommand() {
@@ -165,6 +173,9 @@ public class DonutOrders extends JavaPlugin {
     public void reloadPluginConfig() {
         reloadConfig();
         reloadMessages();
+        if (allowedItemsManager != null) {
+            allowedItemsManager.reload();
+        }
     }
 
     private void reloadMessages() {
@@ -212,6 +223,11 @@ public class DonutOrders extends JavaPlugin {
     /** Returns the active Vault Economy provider. */
     public Economy getEconomy() {
         return economy;
+    }
+
+    /** Returns the allowed-items configuration manager. */
+    public AllowedItemsManager getAllowedItemsManager() {
+        return allowedItemsManager;
     }
 
     /**

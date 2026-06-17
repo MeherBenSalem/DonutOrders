@@ -2,6 +2,10 @@
 #  DonutOrders  –  config.yml
 # ─────────────────────────────────────────────────────────────────────────────
 
+update-check:
+  # Check Modrinth for a newer release when the plugin starts.
+  enabled: true
+
 orders:
   # Maximum simultaneous active orders a single player can hold.
   max-per-player: 10
@@ -21,47 +25,4 @@ gui:
   # How many order entries to show per page on the public orders GUI.
   orders-per-page: 45
 
-# List of materials players are allowed to create buy orders for.
-# Use UPPERCASE Bukkit Material names.
-allowed-materials:
-  - DIAMOND
-  - EMERALD
-  - GOLD_INGOT
-  - IRON_INGOT
-  - NETHERITE_INGOT
-  - COAL
-  - LAPIS_LAZULI
-  - REDSTONE
-  - QUARTZ
-  - AMETHYST_SHARD
-  - GLOWSTONE_DUST
-  - BLAZE_ROD
-  - ENDER_PEARL
-  - GHAST_TEAR
-  - NETHER_STAR
-  - ELYTRA
-  - TOTEM_OF_UNDYING
-  - SHULKER_SHELL
-  - HEART_OF_THE_SEA
-  - TRIDENT
-  - OAK_LOG
-  - SPRUCE_LOG
-  - BIRCH_LOG
-  - JUNGLE_LOG
-  - ACACIA_LOG
-  - DARK_OAK_LOG
-  - MANGROVE_LOG
-  - CHERRY_LOG
-  - WHEAT
-  - CARROT
-  - POTATO
-  - BEETROOT
-  - SUGAR_CANE
-  - PUMPKIN
-  - MELON_SLICE
-  - LEATHER
-  - RABBIT_HIDE
-  - BONE_MEAL
-  - STRING
-  - FEATHER
-  - COBBLESTONE
+# Allowed order materials are configured in items.yml.

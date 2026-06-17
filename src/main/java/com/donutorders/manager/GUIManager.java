@@ -145,7 +145,7 @@ public class GUIManager {
         if (order == null) return;
 
         FoliaScheduler.runAtEntity(player, () -> {
-            ConfirmDeliveryGUI gui = new ConfirmDeliveryGUI(this, order, items);
+            ConfirmDeliveryGUI gui = new ConfirmDeliveryGUI(this, player, order, items);
 
             PlayerGUIState state = new PlayerGUIState();
             state.type           = GUIType.CONFIRM_DELIVERY;

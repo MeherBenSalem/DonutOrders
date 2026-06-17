@@ -5,6 +5,7 @@ import com.donutorders.model.Order;
 import com.donutorders.model.OrderStatus;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
+import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
 import com.donutorders.util.NumberFormatter;
 import net.milkbowl.vault.economy.Economy;
@@ -90,6 +91,16 @@ public class OrderManager {
                     () -> callback.accept(false,
                             "ᴍᴀx ᴏʀᴅᴇʀ ʟɪᴍɪᴛ: " + maxOrders),
                     () -> callback.accept(false, "ᴍᴀx ᴏʀᴅᴇʀ ʟɪᴍɪᴛ"));
+            return;
+        }
+
+        AllowedItemsManager itemsManager = DonutOrders.getInstance().getAllowedItemsManager();
+        if (itemsManager == null
+                || itemTemplate == null
+                || !itemsManager.isAllowed(itemTemplate.getType())) {
+            FoliaScheduler.runAtEntity(buyer,
+                    () -> callback.accept(false, "ɪᴛᴇᴍ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ"),
+                    () -> callback.accept(false, "ɪᴛᴇᴍ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ"));
             return;
         }
 
@@ -186,16 +197,12 @@ public class OrderManager {
             return;
         }
 
-        // Count valid items (correct material, up to remaining amount)
+        // Count valid items (loose GUI stacks + shulker contents)
         int amountNeeded = order.getAmountRemaining();
-        int validCount = 0;
-        for (ItemStack item : items) {
-            if (ItemUtils.isSameMaterial(item, order.getItemTemplate())
-                    && item != null) {
-                validCount += item.getAmount();
-            }
-        }
-        validCount = Math.min(validCount, amountNeeded);
+        ItemStack template = order.getItemTemplate();
+        int validCount = Math.min(
+                DeliveryItemUtils.countAvailable(seller, items, template),
+                amountNeeded);
 
         if (validCount == 0) {
             FoliaScheduler.runAtEntity(seller,
@@ -212,30 +219,45 @@ public class OrderManager {
             return;
         }
 
-        final int finalValidCount = validCount;
-
         // All economy and inventory work MUST occur on the seller's region thread.
         FoliaScheduler.runAtEntity(seller, () -> {
             try {
-                double payout = order.getPricePerItem() * finalValidCount;
+                int deliverCount = Math.min(
+                        DeliveryItemUtils.countAvailable(seller, items, template),
+                        amountNeeded);
+                if (deliverCount == 0) {
+                    callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ");
+                    return;
+                }
+
+                ItemStack[] stashItems = DeliveryItemUtils.extract(
+                        seller, items, template, deliverCount);
+                int extractedCount = 0;
+                for (ItemStack stashItem : stashItems) {
+                    if (stashItem != null) {
+                        extractedCount += stashItem.getAmount();
+                    }
+                }
+                if (extractedCount == 0) {
+                    callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ");
+                    return;
+                }
+
+                double payout = order.getPricePerItem() * extractedCount;
 
                 // Pay the seller
                 economy.depositPlayer(seller, payout);
 
                 // Update order in memory
-                order.setAmountFulfilled(order.getAmountFulfilled() + finalValidCount);
+                order.setAmountFulfilled(order.getAmountFulfilled() + extractedCount);
                 order.setRemainingFunds(order.getRemainingFunds() - payout);
 
-                boolean nowComplete = order.isFullyFulfilled();
-                if (nowComplete) {
-                    order.setStatus(OrderStatus.COMPLETED);
+                if (order.isFullyFulfilled()) {
+                    order.setStatus(OrderStatus.PENDING);
                 }
 
-                // Collect the exactly-used items into the stash.
-                // We add ONLY up to validCount items to the stash, discarding excess
-                // matching items back to the seller (or keeping them in their inv).
-                ItemStack[] stashItems = buildDeliveryStash(items, order.getItemTemplate(),
-                        finalValidCount);
+                // Return shulker boxes from the GUI snapshot (contents already extracted)
+                DeliveryItemUtils.returnSnapshotShulkers(seller, items);
 
                 // Persist order update first, then stash
                 storage.updateOrder(order, () ->
@@ -290,7 +312,7 @@ public class OrderManager {
                 economy.depositPlayer(buyer, refund);
             }
             order.setRemainingFunds(0);
-            order.setStatus(OrderStatus.CANCELLED);
+            order.setStatus(OrderStatus.PENDING);
             storage.updateOrder(order, () ->
                     FoliaScheduler.runAtEntity(buyer,
                             () -> callback.accept(true),
@@ -311,36 +333,105 @@ public class OrderManager {
      */
     public void collectStash(Player buyer, UUID orderId, Consumer<Boolean> callback) {
         Order order = storage.getOrder(orderId);
-        if (order == null || !order.getBuyerUUID().equals(buyer.getUniqueId())) {
+        if (order == null) {
             FoliaScheduler.runAtEntity(buyer,
                     () -> callback.accept(false),
                     () -> callback.accept(false));
             return;
         }
 
+        // Check if player is the correct receiver
+        if (!order.getBuyerUUID().equals(buyer.getUniqueId())) {
+            LOG.log(Level.WARNING, "[Security] Player {0} attempted to claim stash of order {1} owned by {2} ({3}).",
+                new Object[]{buyer.getName(), orderId, order.getBuyerName(), order.getBuyerUUID()});
+            FoliaScheduler.runAtEntity(buyer,
+                    () -> callback.accept(false),
+                    () -> callback.accept(false));
+            return;
+        }
+
+        // Reject if already claimed (Idempotency Protection)
+        if (order.getStatus() == OrderStatus.CLAIMED) {
+            LOG.log(Level.WARNING, "[Security] Player {0} tried to collect order {1} which was ALREADY CLAIMED (claimed at: {2}, claimed by: {3}). Replay attack blocked.",
+                new Object[]{buyer.getName(), orderId, order.getClaimedAt(), order.getClaimedBy()});
+            FoliaScheduler.runAtEntity(buyer,
+                    () -> callback.accept(false),
+                    () -> callback.accept(false));
+            return;
+        }
+
+        if (order.getStatus() != OrderStatus.PENDING) {
+            FoliaScheduler.runAtEntity(buyer,
+                    () -> callback.accept(false),
+                    () -> callback.accept(false));
+            return;
+        }
+
+        // Acquire lock per order claim (Atomic Order Collection)
+        if (!order.tryLockClaim()) {
+            LOG.log(Level.WARNING, "[Security] Player {0} triggered rapid concurrent collection for order {1}. Lock acquisition blocked.",
+                new Object[]{buyer.getName(), orderId});
+            FoliaScheduler.runAtEntity(buyer,
+                    () -> callback.accept(false),
+                    () -> callback.accept(false));
+            return;
+        }
+
+        // Re-check order status under lock
+        if (order.getStatus() != OrderStatus.PENDING) {
+            order.unlockClaim();
+            FoliaScheduler.runAtEntity(buyer,
+                    () -> callback.accept(false),
+                    () -> callback.accept(false));
+            return;
+        }
+
+        // Mark as CLAIMED immediately
+        order.setStatus(OrderStatus.CLAIMED);
+        order.setClaimedAt(System.currentTimeMillis());
+        order.setClaimedBy(buyer.getUniqueId());
+
+        // Load the stash asynchronously from DB
         storage.loadStash(orderId, stash -> {
-            // After async load, jump back to the player's region thread
-            FoliaScheduler.runAtEntity(buyer, () -> {
-                boolean anyItems = false;
-                for (ItemStack item : stash) {
-                    if (item != null && item.getType().isItem()) {
-                        anyItems = true;
-                        Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(item);
-                        if (!overflow.isEmpty()) {
-                            // Drop overflow at player's feet
-                            overflow.values().forEach(drop ->
-                                    buyer.getWorld().dropItemNaturally(buyer.getLocation(), drop));
+            // Save updated order status to DB asynchronously
+            storage.updateOrder(order, () -> {
+                // Clear the stash in database asynchronously
+                storage.clearStash(orderId, () -> {
+                    // Bounce back to the buyer's region thread to execute item insertion & refunds
+                    FoliaScheduler.runAtEntity(buyer, () -> {
+                        try {
+                            boolean anyItems = false;
+                            for (ItemStack item : stash) {
+                                if (item != null && item.getType().isItem()) {
+                                    anyItems = true;
+                                    Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(item);
+                                    if (!overflow.isEmpty()) {
+                                        // Drop overflow at player's feet
+                                        overflow.values().forEach(drop ->
+                                                buyer.getWorld().dropItemNaturally(buyer.getLocation(), drop));
+                                    }
+                                }
+                            }
+
+                            // Refund remaining funds if expired/cancelled and not yet refunded
+                            double refund = order.getRemainingFunds();
+                            if (refund > 0) {
+                                economy.depositPlayer(buyer, refund);
+                                order.setRemainingFunds(0);
+                                storage.updateOrder(order, null);
+                            }
+
+                            callback.accept(true);
+                        } finally {
+                            // Release lock
+                            order.unlockClaim();
                         }
-                    }
-                }
-
-                // Clear the stash in the database
-                if (anyItems) {
-                    storage.clearStash(orderId, null);
-                }
-
-                callback.accept(true);
-            }, () -> callback.accept(false));
+                    }, () -> {
+                        order.unlockClaim();
+                        callback.accept(false);
+                    });
+                });
+            });
         });
     }
 
@@ -359,18 +450,13 @@ public class OrderManager {
             if (order.getStatus() == OrderStatus.ACTIVE
                     && order.getExpiresAt() <= now) {
 
-                order.setStatus(OrderStatus.EXPIRED);
+                order.setStatus(OrderStatus.PENDING);
                 storage.updateOrder(order, null);
 
-                // Notify buyer if online and refund remaining funds
+                // Notify buyer if online
                 Player buyer = Bukkit.getPlayer(order.getBuyerUUID());
                 if (buyer != null && buyer.isOnline()) {
                     FoliaScheduler.runAtEntity(buyer, () -> {
-                        if (order.getRemainingFunds() > 0) {
-                            economy.depositPlayer(buyer, order.getRemainingFunds());
-                            order.setRemainingFunds(0);
-                            storage.updateOrder(order, null);
-                        }
                         String msg = DonutOrders.getInstance().getMessages()
                                 .getString("order-expired",
                                         "&7ʏᴏᴜʀ ᴏʀᴅᴇʀ ʜᴀꜱ ᴇxᴘɪʀᴇᴅ.")
@@ -388,26 +474,6 @@ public class OrderManager {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Extracts exactly {@code needed} items (matching template) from the
-     * delivery GUI slot array into a flat ItemStack array for the stash.
-     */
-    private ItemStack[] buildDeliveryStash(ItemStack[] guiSlots, ItemStack template, int needed) {
-        List<ItemStack> result = new ArrayList<>();
-        int remaining = needed;
-        for (ItemStack slot : guiSlots) {
-            if (remaining <= 0) break;
-            if (ItemUtils.isSameMaterial(slot, template) && slot != null) {
-                int take = Math.min(slot.getAmount(), remaining);
-                ItemStack copy = slot.clone();
-                copy.setAmount(take);
-                result.add(copy);
-                remaining -= take;
-            }
-        }
-        return result.toArray(new ItemStack[0]);
-    }
-
-    /**
      * Merges new delivery items into the existing stash array, filling empty
      * slots or stacking compatible items.
      */
@@ -421,7 +487,7 @@ public class OrderManager {
             // First pass: stack onto same-material stacks
             for (int i = 0; i < stash.length && leftOver > 0; i++) {
                 if (stash[i] != null
-                        && ItemUtils.isSameMaterial(stash[i], add)
+                        && stash[i].isSimilar(add)
                         && stash[i].getAmount() < stash[i].getMaxStackSize()) {
                     int canAdd = stash[i].getMaxStackSize() - stash[i].getAmount();
                     int adding = Math.min(canAdd, leftOver);

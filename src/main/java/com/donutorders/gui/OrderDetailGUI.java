@@ -58,9 +58,8 @@ public class OrderDetailGUI extends BaseGUI {
         // Summary
         inventory.setItem(SLOT_SUMMARY, buildSummaryItem());
 
-        // Collect button (shown if stash has items OR the order is done/cancelled and has funds)
-        boolean canCollect = hasStashItems
-                || (order.getStatus() != OrderStatus.ACTIVE && order.getRemainingFunds() > 0);
+        // Collect button (shown if status is PENDING)
+        boolean canCollect = order.getStatus() == OrderStatus.PENDING;
 
         if (canCollect) {
             inventory.setItem(SLOT_COLLECT, ItemUtils.createGuiItem(
@@ -97,12 +96,16 @@ public class OrderDetailGUI extends BaseGUI {
             case COMPLETED -> "§b";
             case EXPIRED   -> "§6";
             case CANCELLED -> "§c";
+            case PENDING   -> "§e";
+            case CLAIMED   -> "§8";
         };
         String statusName = switch (order.getStatus()) {
             case ACTIVE    -> "ᴀᴄᴛɪᴠᴇ";
             case COMPLETED -> "ᴄᴏᴍᴘʟᴇᴛᴇᴅ";
             case EXPIRED   -> "ᴇxᴘɪʀᴇᴅ";
             case CANCELLED -> "ᴄᴀɴᴄᴇʟʟᴇᴅ";
+            case PENDING   -> "ᴘᴇɴᴅɪɴɢ ᴄᴏʟʟᴇᴄᴛɪᴏɴ";
+            case CLAIMED   -> "ᴄʟᴀɪᴍᴇᴅ";
         };
         List<String> lore = new ArrayList<>(Arrays.asList(
             "§8━━━━━━━━━━━━━━━━━━━━",

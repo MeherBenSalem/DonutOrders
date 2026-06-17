@@ -92,15 +92,20 @@ public class YourOrdersGUI extends BaseGUI {
             case COMPLETED -> "§b";
             case EXPIRED   -> "§6";
             case CANCELLED -> "§c";
+            case PENDING   -> "§e";
+            case CLAIMED   -> "§8";
         };
         String statusName = switch (order.getStatus()) {
             case ACTIVE    -> "ᴀᴄᴛɪᴠᴇ";
             case COMPLETED -> "ᴄᴏᴍᴘʟᴇᴛᴇᴅ";
             case EXPIRED   -> "ᴇxᴘɪʀᴇᴅ";
             case CANCELLED -> "ᴄᴀɴᴄᴇʟʟᴇᴅ";
+            case PENDING   -> "ᴘᴇɴᴅɪɴɢ ᴄᴏʟʟᴇᴄᴛɪᴏɴ";
+            case CLAIMED   -> "ᴄʟᴀɪᴍᴇᴅ";
         };
 
-        boolean hasStash = order.getAmountFulfilled() > 0
+        boolean hasStash = order.getStatus() == OrderStatus.PENDING
+                || order.getAmountFulfilled() > 0
                 || order.getStatus() == OrderStatus.EXPIRED
                 || order.getStatus() == OrderStatus.CANCELLED;
 

@@ -1,5 +1,5 @@
 name: DonutOrders
-version: '1.0.0'
+version: '1.2.0'
 main: com.donutorders.DonutOrders
 api-version: '1.20'
 description: Player-driven buy-order marketplace.
@@ -17,7 +17,7 @@ commands:
     description: Open the orders marketplace.
     usage: /orders
     permission: donutorders.use
-    aliases: [order, market]
+    aliases: [order, market, donutorders]
 
 permissions:
   donutorders.use:
