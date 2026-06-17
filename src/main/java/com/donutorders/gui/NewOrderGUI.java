@@ -58,9 +58,18 @@ public class NewOrderGUI extends BaseGUI {
     }
 
     private List<Material> loadAllowedMaterials() {
-        AllowedItemsManager itemsManager = DonutOrders.getInstance().getAllowedItemsManager();
-        if (itemsManager == null) {
-            return List.of();
+        FileConfiguration config = DonutOrders.getInstance().getConfig();
+        List<String> names = config.getStringList("allowed-materials");
+        List<Material> result = new ArrayList<>();
+        for (String name : names) {
+            try {
+                Material material = Material.valueOf(name.toUpperCase());
+                if (material.isItem() && material != Material.AIR) {
+                    result.add(material);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Invalid material name in config — skip
+            }
         }
         return itemsManager.getAllowedMaterials();
     }
