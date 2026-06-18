@@ -1,7 +1,6 @@
 package com.donutorders.gui;
 
 import com.donutorders.DonutOrders;
-import com.donutorders.manager.AllowedItemsManager;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.util.ItemUtils;
 import org.bukkit.Bukkit;
@@ -58,20 +57,7 @@ public class NewOrderGUI extends BaseGUI {
     }
 
     private List<Material> loadAllowedMaterials() {
-        FileConfiguration config = DonutOrders.getInstance().getConfig();
-        List<String> names = config.getStringList("allowed-materials");
-        List<Material> result = new ArrayList<>();
-        for (String name : names) {
-            try {
-                Material material = Material.valueOf(name.toUpperCase());
-                if (material.isItem() && material != Material.AIR) {
-                    result.add(material);
-                }
-            } catch (IllegalArgumentException ignored) {
-                // Invalid material name in config — skip
-            }
-        }
-        return itemsManager.getAllowedMaterials();
+        return DonutOrders.getInstance().getAllowedItemsManager().getAllowedMaterials();
     }
 
     private void build() {

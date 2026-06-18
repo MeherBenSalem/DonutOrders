@@ -1,5 +1,5 @@
 name: DonutOrders
-version: '1.2.0'
+version: '1.2.1'
 main: com.donutorders.DonutOrders
 api-version: '1.20'
 description: Player-driven buy-order marketplace.

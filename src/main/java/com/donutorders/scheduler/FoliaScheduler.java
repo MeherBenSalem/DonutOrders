@@ -159,7 +159,10 @@ public final class FoliaScheduler {
      */
     public static void runAsync(Runnable task) {
         Plugin plugin = DonutOrders.getInstance();
-        // BukkitScheduler async works identically on both Paper and Folia.
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+        if (IS_FOLIA) {
+            Bukkit.getAsyncScheduler().runNow(plugin, t -> task.run());
+        } else {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+        }
     }
 }
