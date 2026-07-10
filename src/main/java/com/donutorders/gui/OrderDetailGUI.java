@@ -1,39 +1,19 @@
 package com.donutorders.gui;
 
-import com.donutorders.DonutOrders;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
 import com.donutorders.model.OrderStatus;
 import com.donutorders.util.ItemUtils;
+import com.donutorders.util.MessageHelper;
 import com.donutorders.util.NumberFormatter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 /**
- * GUI: "ᴏʀᴅᴇʀ ᴅᴇᴛᴀɪʟꜱ" — the buyer's detail / management screen for a single order.
- *
- * <p>Layout (27 slots):
- * <pre>
- * [0–8]    Row 1 — fillers
- * [9]      Filler
- * [10]     Filler
- * [11]     "ᴄᴏʟʟᴇᴄᴛ" (only if stash has items or funds to refund)
- * [12]     Filler
- * [13]     Order summary item
- * [14]     Filler
- * [15]     "ᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ" (only if ACTIVE)
- * [16]     Filler
- * [17]     Filler
- * [18]–[26] Row 3 — [22] = "ʙᴀᴄᴋ" button, rest fillers
- * </pre>
+ * GUI: the buyer's detail / management screen for a single order.
  */
 public class OrderDetailGUI extends BaseGUI {
 
@@ -47,7 +27,8 @@ public class OrderDetailGUI extends BaseGUI {
     private final boolean hasStashItems;
 
     public OrderDetailGUI(GUIManager guiManager, Order order, boolean hasStashItems) {
-        super(Bukkit.createInventory(null, 27, "ᴏʀᴅᴇʀ ᴅᴇᴛᴀɪʟꜱ"));
+        super(Bukkit.createInventory(null, 27,
+                MessageHelper.get("gui.order-detail.title", "ᴏʀᴅᴇʀ ᴅᴇᴛᴀɪʟꜱ")));
         this.guiManager    = guiManager;
         this.order         = order;
         this.hasStashItems = hasStashItems;
@@ -55,73 +36,54 @@ public class OrderDetailGUI extends BaseGUI {
     }
 
     private void build() {
-        // Summary
         inventory.setItem(SLOT_SUMMARY, buildSummaryItem());
 
-        // Collect button (shown if status is PENDING)
         boolean canCollect = order.getStatus() == OrderStatus.PENDING;
 
         if (canCollect) {
+            String stashLine = hasStashItems
+                    ? MessageHelper.get("gui.your-orders.stash-has-items", "&e⬛ ꜱᴛᴀꜱʜ ʜᴀꜱ ɪᴛᴇᴍꜱ")
+                    : MessageHelper.get("gui.your-orders.stash-empty", "&7ꜱᴛᴀꜱʜ ɪꜱ ᴇᴍᴘᴛʏ");
+
             inventory.setItem(SLOT_COLLECT, ItemUtils.createGuiItem(
                 Material.CHEST,
-                "§a§lᴄᴏʟʟᴇᴄᴛ",
-                Arrays.asList(
-                    "§7ᴏᴘᴇɴ ꜱᴛᴀꜱʜ ᴀɴᴅ ᴄᴏʟʟᴇᴄᴛ ɪᴛᴇᴍꜱ.",
-                    hasStashItems ? "§e⬛ ꜱᴛᴀꜱʜ ʜᴀꜱ ɪᴛᴇᴍꜱ" : "§7ꜱᴛᴀꜱʜ ɪꜱ ᴇᴍᴘᴛʏ"
-                )));
+                MessageHelper.get("gui.order-detail.collect.name", "&a&lᴄᴏʟʟᴇᴄᴛ"),
+                MessageHelper.getList("gui.order-detail.collect.lore",
+                    "stash_line", stashLine)));
         }
 
-        // Cancel button (only if active)
         if (order.getStatus() == OrderStatus.ACTIVE) {
             inventory.setItem(SLOT_CANCEL, ItemUtils.createGuiItem(
                 Material.RED_WOOL,
-                "§c§lᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ",
-                Arrays.asList(
-                    "§7ᴄᴀɴᴄᴇʟ ᴛʜɪꜱ ᴏʀᴅᴇʀ.",
-                    "§7ʀᴇᴍᴀɪɴɪɴɢ ꜰᴜɴᴅꜱ: §a"
-                        + NumberFormatter.formatPrice(order.getRemainingFunds()) + " §7ʀᴇꜰᴜɴᴅᴇᴅ."
-                )));
+                MessageHelper.get("gui.order-detail.cancel.name", "&c&lᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ"),
+                MessageHelper.getList("gui.order-detail.cancel.lore",
+                    "funds", NumberFormatter.formatPrice(order.getRemainingFunds()))));
         }
 
         inventory.setItem(SLOT_BACK, ItemUtils.createGuiItem(
-            Material.ARROW, "§7« ʙᴀᴄᴋ",
-            Arrays.asList("§7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ.")));
+            Material.ARROW,
+            MessageHelper.get("gui.order-detail.back.name", "&7« ʙᴀᴄᴋ"),
+            MessageHelper.getList("gui.order-detail.back.lore")));
 
         fillEmpty();
     }
 
     private ItemStack buildSummaryItem() {
-        String statusColor = switch (order.getStatus()) {
-            case ACTIVE    -> "§a";
-            case COMPLETED -> "§b";
-            case EXPIRED   -> "§6";
-            case CANCELLED -> "§c";
-            case PENDING   -> "§e";
-            case CLAIMED   -> "§8";
-        };
-        String statusName = switch (order.getStatus()) {
-            case ACTIVE    -> "ᴀᴄᴛɪᴠᴇ";
-            case COMPLETED -> "ᴄᴏᴍᴘʟᴇᴛᴇᴅ";
-            case EXPIRED   -> "ᴇxᴘɪʀᴇᴅ";
-            case CANCELLED -> "ᴄᴀɴᴄᴇʟʟᴇᴅ";
-            case PENDING   -> "ᴘᴇɴᴅɪɴɢ ᴄᴏʟʟᴇᴄᴛɪᴏɴ";
-            case CLAIMED   -> "ᴄʟᴀɪᴍᴇᴅ";
-        };
-        List<String> lore = new ArrayList<>(Arrays.asList(
-            "§8━━━━━━━━━━━━━━━━━━━━",
-            "§7ꜱᴛᴀᴛᴜꜱ: " + statusColor + statusName,
-            "§7ᴘʀᴏɢʀᴇꜱꜱ: §f"
-                + NumberFormatter.format(order.getAmountFulfilled())
-                + " §7/ §f" + NumberFormatter.format(order.getAmountRequested()),
-            "§7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: §a" + NumberFormatter.formatPrice(order.getPricePerItem()),
-            "§7ꜰᴜɴᴅꜱ ʜᴇʟᴅ: §a" + NumberFormatter.formatPrice(order.getRemainingFunds()),
-            "§7ᴇxᴘɪʀᴇꜱ: §e" + order.getFormattedExpiry(),
-            "§8━━━━━━━━━━━━━━━━━━━━"
-        ));
+        String statusColor = MessageHelper.statusColor(order.getStatus());
+        String statusName  = MessageHelper.statusName(order.getStatus());
+
         return ItemUtils.createGuiItem(
             order.getItemTemplate().getType(),
-            "§f§l" + ItemUtils.prettyName(order.getItemTemplate().getType()),
-            lore);
+            MessageHelper.getNamed("gui.order-detail.summary.name", "&f&l{item}",
+                "item", ItemUtils.prettyName(order.getItemTemplate().getType())),
+            MessageHelper.getList("gui.order-detail.summary.lore",
+                "status_color", statusColor,
+                "status", statusName,
+                "fulfilled", NumberFormatter.format(order.getAmountFulfilled()),
+                "requested", NumberFormatter.format(order.getAmountRequested()),
+                "price", NumberFormatter.formatPrice(order.getPricePerItem()),
+                "funds", NumberFormatter.formatPrice(order.getRemainingFunds()),
+                "expiry", order.getFormattedExpiry()));
     }
 
     @Override
@@ -129,17 +91,17 @@ public class OrderDetailGUI extends BaseGUI {
         if (slot == SLOT_COLLECT) {
             guiManager.openCollectStash(player, order.getOrderId());
         } else if (slot == SLOT_CANCEL && order.getStatus() == OrderStatus.ACTIVE) {
+            // Capture refund before cancelOrder zeroes remaining funds
+            final double refundAmount = order.getRemainingFunds();
             guiManager.getOrderManager().cancelOrder(player, order.getOrderId(),
                 success -> {
                     if (success) {
-                        String msg = DonutOrders.getInstance().getMessages()
-                            .getString("order-cancelled", "&aᴏʀᴅᴇʀ ᴄᴀɴᴄᴇʟʟᴇᴅ. &f{0} §7ʀᴇꜰᴜɴᴅᴇᴅ.")
-                            .replace("{0}", NumberFormatter.formatPrice(order.getRemainingFunds()));
-                        player.sendMessage(DonutOrders.colorize(
-                            DonutOrders.getInstance().getMessages()
-                                .getString("prefix", "") + msg));
+                        MessageHelper.sendPrefixed(player, "order-cancelled",
+                            "&aᴏʀᴅᴇʀ ᴄᴀɴᴄᴇʟʟᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ.",
+                            NumberFormatter.formatPrice(refundAmount));
                     } else {
-                        player.sendMessage(DonutOrders.colorize("§cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ."));
+                        MessageHelper.send(player, "order-cancel-failed",
+                            "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ.");
                     }
                     guiManager.openYourOrders(player, 0);
                 });

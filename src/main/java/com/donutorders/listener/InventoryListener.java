@@ -6,6 +6,7 @@ import com.donutorders.gui.DeliverItemsGUI;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
+import com.donutorders.util.MessageHelper;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -109,10 +110,9 @@ public class InventoryListener implements Listener {
                             event.setCancelled(false);
                         } else {
                             event.setCancelled(true);
-                            player.sendMessage(com.donutorders.DonutOrders.colorize(
-                                com.donutorders.DonutOrders.getInstance().getMessages()
-                                    .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
-                                    .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                            MessageHelper.send(player, "delivery-wrong-item",
+                                "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
+                                ItemUtils.prettyName(template.getType()));
                         }
                     }
                 } else if (action == InventoryAction.COLLECT_TO_CURSOR) {
@@ -170,10 +170,9 @@ public class InventoryListener implements Listener {
                         event.setCancelled(false);
                     } else {
                         event.setCancelled(true);
-                        player.sendMessage(com.donutorders.DonutOrders.colorize(
-                            com.donutorders.DonutOrders.getInstance().getMessages()
-                                .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
-                                .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                        MessageHelper.send(player, "delivery-wrong-item",
+                            "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
+                            ItemUtils.prettyName(template.getType()));
                     }
                 }
                 return;
@@ -188,10 +187,9 @@ public class InventoryListener implements Listener {
                         event.setCancelled(false);
                     } else {
                         event.setCancelled(true);
-                        player.sendMessage(com.donutorders.DonutOrders.colorize(
-                            com.donutorders.DonutOrders.getInstance().getMessages()
-                                .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
-                                .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                        MessageHelper.send(player, "delivery-wrong-item",
+                            "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
+                            ItemUtils.prettyName(template.getType()));
                     }
                 } else {
                     event.setCancelled(false);
@@ -207,10 +205,9 @@ public class InventoryListener implements Listener {
                         event.setCancelled(false);
                     } else {
                         event.setCancelled(true);
-                        player.sendMessage(com.donutorders.DonutOrders.colorize(
-                            com.donutorders.DonutOrders.getInstance().getMessages()
-                                .getString("delivery-wrong-item", "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ.")
-                                .replace("{0}", ItemUtils.prettyName(template.getType()))));
+                        MessageHelper.send(player, "delivery-wrong-item",
+                            "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
+                            ItemUtils.prettyName(template.getType()));
                     }
                 } else {
                     event.setCancelled(false);

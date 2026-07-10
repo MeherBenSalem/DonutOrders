@@ -5,31 +5,16 @@ import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
 import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
+import com.donutorders.util.MessageHelper;
 import com.donutorders.util.NumberFormatter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Arrays;
-
 /**
- * GUI: "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ" — shows the seller a summary before committing.
- *
- * <p>Layout (27 slots):
- * <pre>
- * [0–8]    Row 1 — fillers
- * [9]      Filler
- * [10]     Filler
- * [11]     §a CONFIRM  (lime wool)
- * [12]     Filler
- * [13]     Summary item (paper / item icon)
- * [14]     Filler
- * [15]     §c CANCEL   (red wool)
- * [16]–[26] Fillers
- * </pre>
+ * GUI: shows the seller a summary before committing a delivery.
  */
 public class ConfirmDeliveryGUI extends BaseGUI {
 
@@ -40,7 +25,7 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     private final GUIManager guiManager;
     private final Order order;
     private final Player seller;
-    private final ItemStack[] items;   // snapshot from DeliverItemsGUI
+    private final ItemStack[] items;
     private final int deliverCount;
     private final double payout;
 
@@ -52,7 +37,8 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     private volatile boolean submitted = false;
 
     public ConfirmDeliveryGUI(GUIManager guiManager, Player seller, Order order, ItemStack[] items) {
-        super(Bukkit.createInventory(null, 27, "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ"));
+        super(Bukkit.createInventory(null, 27,
+                MessageHelper.get("gui.confirm-delivery.title", "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ")));
         this.guiManager    = guiManager;
         this.seller        = seller;
         this.order         = order;
@@ -65,23 +51,25 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     }
 
     private void build() {
+        String itemName = ItemUtils.prettyName(order.getItemTemplate().getType());
+
         inventory.setItem(SLOT_SUMMARY, ItemUtils.createGuiItem(
             order.getItemTemplate().getType(),
-            "§f§l" + ItemUtils.prettyName(order.getItemTemplate().getType()),
-            Arrays.asList(
-                "§8━━━━━━━━━━━━━━━━━━━━",
-                "§7ᴅᴇʟɪᴠᴇʀɪɴɢ: §f" + NumberFormatter.format(deliverCount),
-                "§7ᴘᴀʏᴏᴜᴛ: §a" + NumberFormatter.formatPrice(payout),
-                "§8━━━━━━━━━━━━━━━━━━━━"
-            )));
+            MessageHelper.getNamed("gui.confirm-delivery.summary.name", "&f&l{item}",
+                "item", itemName),
+            MessageHelper.getList("gui.confirm-delivery.summary.lore",
+                "count", NumberFormatter.format(deliverCount),
+                "payout", NumberFormatter.formatPrice(payout))));
 
         inventory.setItem(SLOT_CONFIRM, ItemUtils.createGuiItem(
-            Material.LIME_WOOL, "§a§lᴄᴏɴꜰɪʀᴍ",
-            Arrays.asList("§7ᴄʟɪᴄᴋ ᴛᴏ ᴅᴇʟɪᴠᴇʀ ᴀɴᴅ ʀᴇᴄᴇɪᴠᴇ ᴘᴀʏᴍᴇɴᴛ.")));
+            Material.LIME_WOOL,
+            MessageHelper.get("gui.confirm-delivery.confirm.name", "&a&lᴄᴏɴꜰɪʀᴍ"),
+            MessageHelper.getList("gui.confirm-delivery.confirm.lore")));
 
         inventory.setItem(SLOT_CANCEL, ItemUtils.createGuiItem(
-            Material.RED_WOOL, "§c§lᴄᴀɴᴄᴇʟ",
-            Arrays.asList("§7ɢᴏ ʙᴀᴄᴋ.")));
+            Material.RED_WOOL,
+            MessageHelper.get("gui.confirm-delivery.cancel.name", "&c&lᴄᴀɴᴄᴇʟ"),
+            MessageHelper.getList("gui.confirm-delivery.cancel.lore")));
 
         fillEmpty();
     }
@@ -96,17 +84,15 @@ public class ConfirmDeliveryGUI extends BaseGUI {
             guiManager.getOrderManager().fulfillOrder(player, order.getOrderId(), items,
                 (success, errorMsg) -> {
                     if (success) {
-                        String msg = DonutOrders.getInstance().getMessages()
-                            .getString("delivery-success",
-                                "&aᴅᴇʟɪᴠᴇʀᴇᴅ &f{0}× {1}&a. ʏᴏᴜ ᴇᴀʀɴᴇᴅ &f{2}&a.")
-                            .replace("{0}", NumberFormatter.format(deliverCount))
-                            .replace("{1}", ItemUtils.prettyName(order.getItemTemplate().getType()))
-                            .replace("{2}", NumberFormatter.formatPrice(payout));
-                        player.sendMessage(DonutOrders.colorize(
-                            DonutOrders.getInstance().getMessages()
-                                .getString("prefix", "") + msg));
+                        MessageHelper.sendPrefixed(player, "delivery-success",
+                            "&aᴅᴇʟɪᴠᴇʀᴇᴅ &f{0}× {1}&a. ʏᴏᴜ ᴇᴀʀɴᴇᴅ &f{2}&a.",
+                            NumberFormatter.format(deliverCount),
+                            ItemUtils.prettyName(order.getItemTemplate().getType()),
+                            NumberFormatter.formatPrice(payout));
                     } else {
-                        player.sendMessage(DonutOrders.colorize("§c" + errorMsg));
+                        player.sendMessage(errorMsg != null ? errorMsg
+                                : MessageHelper.get("delivery-failed",
+                                    "&cᴅᴇʟɪᴠᴇʀʏ ꜰᴀɪʟᴇᴅ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."));
                     }
                     guiManager.openPublicOrders(player, 0);
                 });
@@ -119,8 +105,7 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     /**
      * Returns the item snapshot to the player's inventory.
      * Called on CANCEL click and when the GUI is closed without confirming.
-     * No-op if {@link #submitted} is {@code true} — items are already in transit
-     * to the order stash and must not be duplicated.
+     * No-op if {@link #submitted} is {@code true}.
      */
     public void returnItems(Player player) {
         if (submitted) {
@@ -133,7 +118,7 @@ public class ConfirmDeliveryGUI extends BaseGUI {
             "[DonutOrders] ConfirmDeliveryGUI.returnItems — returning snapshot to "
             + player.getName());
         for (ItemStack item : items) {
-            if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
+            if (item == null || item.getType() == Material.AIR) continue;
             var overflow = player.getInventory().addItem(item.clone());
             overflow.values().forEach(drop ->
                 player.getWorld().dropItemNaturally(player.getLocation(), drop));

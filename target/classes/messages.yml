@@ -1,28 +1,250 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  DonutOrders  –  messages.yml
+#
+#  Edit this file to translate the entire plugin into your language.
+#  No recompile needed — run:  /orders admin reload
+#
+#  Formatting:
+#    &0–&f, &k–&o, &l, &m, &n, &r   standard Minecraft color/format codes
+#    #RRGGBB                         hex colors (Paper/Folia)
+#
+#  Placeholders (depend on the key):
+#    {0} {1} {2} …                   positional
+#    {item} {buyer} {price} …        named (GUI lore)
+#
+#  Inventory titles should stay short (ideally under ~32 characters).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── General ───────────────────────────────────────────────────────────────────
 prefix: "&8[&b&lᴅᴏɴᴜᴛ&f&lᴏʀᴅᴇʀꜱ&8] &r"
 no-permission: "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴅᴏ ᴛʜᴀᴛ."
 player-only: "&cᴏɴʟʏ ᴘʟᴀʏᴇʀꜱ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ."
 config-reloaded: "&aᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ ʀᴇʟᴏᴀᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ."
+plugin-starting: "&eᴅᴏɴᴜᴛᴏʀᴅᴇʀꜱ ɪꜱ ꜱᴛɪʟʟ ꜱᴛᴀʀᴛɪɴɢ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ɪɴ ᴀ ᴍᴏᴍᴇɴᴛ."
+
+# Keyword players type in chat to cancel amount/price input (case-insensitive)
+chat-cancel-keyword: "cancel"
+
+# ── Chat / order creation ─────────────────────────────────────────────────────
+chat-prompt-amount: "&eᴇɴᴛᴇʀ ᴛʜᴇ ᴀᴍᴏᴜɴᴛ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙᴜʏ (ᴏʀ &c{0}&e):"
+chat-prompt-price: "&eᴇɴᴛᴇʀ ᴘʀɪᴄᴇ ᴘᴇʀ ɪᴛᴇᴍ (ᴏʀ &c{0}&e):"
+chat-input-cancelled: "&7ɪɴᴘᴜᴛ ᴄᴀɴᴄᴇʟʟᴇᴅ."
+chat-input-invalid-number: "&cɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ᴡʜᴏʟᴇ ɴᴜᴍʙᴇʀ."
+chat-input-invalid-price: "&cɪɴᴠᴀʟɪᴅ ᴘʀɪᴄᴇ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ."
+chat-input-timeout: "&7ᴄʜᴀᴛ ɪɴᴘᴜᴛ ᴛɪᴍᴇᴅ ᴏᴜᴛ."
+
+# ── Order messages ────────────────────────────────────────────────────────────
 order-created: "&aᴏʀᴅᴇʀ ᴄʀᴇᴀᴛᴇᴅ! &f{0} &7× {1} &7@ &f{2} &7ᴇᴀᴄʜ &8(&f{3} &7ᴡɪᴛʜᴅʀᴀᴡɴ&8)"
 max-orders-reached: "&cʏᴏᴜ ʜᴀᴠᴇ ʀᴇᴀᴄʜᴇᴅ ᴛʜᴇ ᴍᴀxɪᴍᴜᴍ ɴᴜᴍʙᴇʀ ᴏꜰ ᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ ({0})."
 insufficient-funds: "&cɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜰᴜɴᴅꜱ. ʏᴏᴜ ɴᴇᴇᴅ &f{0}&c ʙᴜᴛ ᴏɴʟʏ ʜᴀᴠᴇ &f{1}&c."
 order-create-failed: "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴏʀᴅᴇʀ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."
-chat-prompt-amount: "&eᴇɴᴛᴇʀ ᴛʜᴇ ᴀᴍᴏᴜɴᴛ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙᴜʏ (ᴏʀ &cᴄᴀɴᴄᴇʟ&e):"
-chat-prompt-price: "&eᴇɴᴛᴇʀ ᴘʀɪᴄᴇ ᴘᴇʀ ɪᴛᴇᴍ (ᴏʀ &cᴄᴀɴᴄᴇʟ&e):"
-chat-input-cancelled: "&7ɪɴᴘᴜᴛ ᴄᴀɴᴄᴇʟʟᴇᴅ."
-chat-input-invalid-number: "&cɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ʜᴏʟᴇ ɴᴜᴍʙᴇʀ."
-chat-input-invalid-price: "&cɪɴᴠᴀʟɪᴅ ᴘʀɪᴄᴇ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ."
-chat-input-timeout: "&7ᴄʜᴀᴛ ɪɴᴘᴜᴛ ᴛɪᴍᴇᴅ ᴏᴜᴛ."
+item-not-allowed: "&cᴛʜᴀᴛ ɪᴛᴇᴍ ɪꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ ꜰᴏʀ ᴏʀᴅᴇʀꜱ."
+order-cancelled: "&aᴏʀᴅᴇʀ ᴄᴀɴᴄᴇʟʟᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ."
+order-cancel-failed: "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ."
+order-not-found: "&cᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ."
+order-not-yours: "&cᴛʜᴀᴛ ᴏʀᴅᴇʀ ᴅᴏᴇꜱ ɴᴏᴛ ʙᴇʟᴏɴɢ ᴛᴏ ʏᴏᴜ."
+order-expired: "&7ʏᴏᴜʀ ᴏʀᴅᴇʀ ʜᴀꜱ ᴇxᴘɪʀᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ (ᴄᴏʟʟᴇᴄᴛ ɪᴛᴇᴍꜱ ꜰʀᴏᴍ &e/ᴏʀᴅᴇʀꜱ&7)."
+order-no-longer-active: "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ."
+player-retired: "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ."
+
+# ── Delivery messages ─────────────────────────────────────────────────────────
 delivery-success: "&aᴅᴇʟɪᴠᴇʀᴇᴅ &f{0}× {1}&a. ʏᴏᴜ ᴇᴀʀɴᴇᴅ &f{2}&a."
 delivery-no-items: "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."
 delivery-wrong-item: "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c."
 delivery-order-full: "&cᴛʜɪꜱ ᴏʀᴅᴇʀ ɪꜱ ᴀʟʀᴇᴀᴅʏ ꜰᴜʟꜰɪʟʟᴇᴅ."
 delivery-failed: "&cᴅᴇʟɪᴠᴇʀʏ ꜰᴀɪʟᴇᴅ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."
 delivery-own-order: "&cʏᴏᴜ ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀ."
+delivery-in-progress: "&cᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ."
+
+# ── Collect messages ──────────────────────────────────────────────────────────
 collect-success: "&aɪᴛᴇᴍꜱ ᴄᴏʟʟᴇᴄᴛᴇᴅ ꜰʀᴏᴍ ꜱᴛᴀꜱʜ."
 collect-nothing: "&7ɴᴏᴛʜɪɴɢ ᴛᴏ ᴄᴏʟʟᴇᴄᴛ."
 collect-inventory-full: "&cɪɴᴠᴇɴᴛᴏʀʏ ꜰᴜʟʟ — ᴏᴠᴇʀꜰʟᴏᴡ ᴅʀᴏᴘᴘᴇᴅ ᴀᴛ ʏᴏᴜʀ ꜰᴇᴇᴛ."
-order-cancelled: "&aᴏʀᴅᴇʀ ᴄᴀɴᴄᴇʟʟᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ."
-order-cancel-failed: "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ."
-order-not-found: "&cᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ."
-order-not-yours: "&cᴛʜᴀᴛ ᴏʀᴅᴇʀ ᴅᴏᴇꜱ ɴᴏᴛ ʙᴇʟᴏɴɢ ᴛᴏ ʏᴏᴜ."
-order-expired: "&7ʏᴏᴜʀ ᴏʀᴅᴇʀ ʜᴀꜱ ᴇxᴘɪʀᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ (ᴄᴏʟʟᴇᴄᴛ ɪᴛᴇᴍꜱ ꜰʀᴏᴍ &e/ᴏʀᴅᴇʀꜱ&7)."
+
+# ── Order status labels ───────────────────────────────────────────────────────
+status:
+  active: "ᴀᴄᴛɪᴠᴇ"
+  completed: "ᴄᴏᴍᴘʟᴇᴛᴇᴅ"
+  expired: "ᴇxᴘɪʀᴇᴅ"
+  cancelled: "ᴄᴀɴᴄᴇʟʟᴇᴅ"
+  pending: "ᴘᴇɴᴅɪɴɢ ᴄᴏʟʟᴇᴄᴛɪᴏɴ"
+  claimed: "ᴄʟᴀɪᴍᴇᴅ"
+  color:
+    active: "&a"
+    completed: "&b"
+    expired: "&6"
+    cancelled: "&c"
+    pending: "&e"
+    claimed: "&8"
+
+# ── Time / expiry formatting ──────────────────────────────────────────────────
+time:
+  expired: "ᴇxᴘɪʀᴇᴅ"
+  days-suffix: "ᴅ"
+  hours-suffix: "ʜ"
+  minutes-suffix: "ᴍ"
+
+# ── Shared pagination / buttons ───────────────────────────────────────────────
+buttons:
+  previous:
+    name: "&7« ᴘʀᴇᴠɪᴏᴜꜱ"
+    lore:
+      - "&8ᴘᴀɢᴇ {page} ᴏꜰ {max_page}"
+  next:
+    name: "&7ɴᴇxᴛ »"
+    lore:
+      - "&8ᴘᴀɢᴇ {page} ᴏꜰ {max_page}"
+  back:
+    name: "&7« ʙᴀᴄᴋ"
+    lore:
+      - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ."
+  close:
+    name: "&c&lᴄʟᴏꜱᴇ"
+    lore:
+      - "&7ᴄʟᴏꜱᴇ ᴛʜɪꜱ ᴍᴇɴᴜ."
+  confirm:
+    name: "&a&lᴄᴏɴꜰɪʀᴍ"
+  cancel:
+    name: "&c&lᴄᴀɴᴄᴇʟ"
+
+# ── GUI: Public Orders (marketplace) ─────────────────────────────────────────
+gui:
+  public-orders:
+    title: "ᴏʀᴅᴇʀꜱ"
+    my-orders:
+      name: "&b&lᴍʏ ᴏʀᴅᴇʀꜱ"
+      lore:
+        - "&7ᴠɪᴇᴡ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀꜱ."
+    order-item:
+      name: "&f{item}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ʙᴜʏᴇʀ: &f{buyer}"
+        - "&7ᴡᴀɴᴛꜱ: &f{remaining} &7/ &f{requested}"
+        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
+        - "&7ᴛᴏᴛᴀʟ ᴘᴏᴛᴇɴᴛɪᴀʟ: &a{total}"
+        - "&7ᴇxᴘɪʀᴇꜱ: &e{expiry}"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&eʟᴇꜰᴛ ᴄʟɪᴄᴋ &7ᴛᴏ ᴅᴇʟɪᴠᴇʀ ɪᴛᴇᴍꜱ"
+
+  # ── GUI: Your Orders ──────────────────────────────────────────────────────
+  your-orders:
+    title: "ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ"
+    new-order:
+      name: "&a&lɴᴇᴡ ᴏʀᴅᴇʀ"
+      lore:
+        - "&7ᴄʀᴇᴀᴛᴇ ᴀ ɴᴇᴡ ʙᴜʏ ᴏʀᴅᴇʀ."
+    browse-market:
+      name: "&b&lʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ"
+      lore:
+        - "&7ᴠɪᴇᴡ ᴀʟʟ ᴘᴜʙʟɪᴄ ᴏʀᴅᴇʀꜱ."
+    order-item:
+      name: "{status_color}{item}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ꜱᴛᴀᴛᴜꜱ: {status_color}{status}"
+        - "&7ᴘʀᴏɢʀᴇꜱꜱ: &f{fulfilled} &7/ &f{requested}"
+        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
+        - "&7ᴇxᴘɪʀᴇꜱ: &e{expiry}"
+        - "{stash_line}"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&eʟᴇꜰᴛ ᴄʟɪᴄᴋ &7ᴛᴏ ᴠɪᴇᴡ ᴅᴇᴛᴀɪʟꜱ"
+    stash-has-items: "&e⬛ ꜱᴛᴀꜱʜ ʜᴀꜱ ɪᴛᴇᴍꜱ"
+    stash-empty: "&7ꜱᴛᴀꜱʜ ɪꜱ ᴇᴍᴘᴛʏ"
+
+  # ── GUI: New Order (item picker) ──────────────────────────────────────────
+  new-order:
+    title: "ɴᴇᴡ ᴏʀᴅᴇʀ"
+    material:
+      name: "&f{item}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ʟᴇꜰᴛ ᴄʟɪᴄᴋ &eᴛᴏ ꜱᴇʟᴇᴄᴛ"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+    back:
+      name: "&c&lʙᴀᴄᴋ"
+      lore:
+        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ."
+
+  # ── GUI: Order Details ────────────────────────────────────────────────────
+  order-detail:
+    title: "ᴏʀᴅᴇʀ ᴅᴇᴛᴀɪʟꜱ"
+    summary:
+      name: "&f&l{item}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ꜱᴛᴀᴛᴜꜱ: {status_color}{status}"
+        - "&7ᴘʀᴏɢʀᴇꜱꜱ: &f{fulfilled} &7/ &f{requested}"
+        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
+        - "&7ꜰᴜɴᴅꜱ ʜᴇʟᴅ: &a{funds}"
+        - "&7ᴇxᴘɪʀᴇꜱ: &e{expiry}"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+    collect:
+      name: "&a&lᴄᴏʟʟᴇᴄᴛ"
+      lore:
+        - "&7ᴏᴘᴇɴ ꜱᴛᴀꜱʜ ᴀɴᴅ ᴄᴏʟʟᴇᴄᴛ ɪᴛᴇᴍꜱ."
+        - "{stash_line}"
+    cancel:
+      name: "&c&lᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ"
+      lore:
+        - "&7ᴄᴀɴᴄᴇʟ ᴛʜɪꜱ ᴏʀᴅᴇʀ."
+        - "&7ʀᴇᴍᴀɪɴɪɴɢ ꜰᴜɴᴅꜱ: &a{funds} &7ʀᴇꜰᴜɴᴅᴇᴅ."
+    back:
+      name: "&7« ʙᴀᴄᴋ"
+      lore:
+        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ."
+
+  # ── GUI: Deliver Items ────────────────────────────────────────────────────
+  deliver-items:
+    title: "ᴅᴇʟɪᴠᴇʀ ɪᴛᴇᴍꜱ"
+    order-info:
+      name: "&b&l{item}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ʙᴜʏᴇʀ: &f{buyer}"
+        - "&7ɴᴇᴇᴅꜱ: &f{remaining}"
+        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ᴘʟᴀᴄᴇ &f{item} &7ɪɴ ᴛʜᴇ ꜱʟᴏᴛꜱ ᴀʙᴏᴠᴇ."
+        - "&7ꜱʜᴜʟᴋᴇʀ ʙᴏxᴇꜱ ᴡɪᴛʜ ᴍᴀᴛᴄʜɪɴɢ"
+        - "&7ɪᴛᴇᴍꜱ ᴀʀᴇ ᴀʟꜱᴏ ꜱᴜᴘᴘᴏʀᴛᴇᴅ."
+    confirm:
+      name: "&a&lᴄᴏɴꜰɪʀᴍ"
+      lore:
+        - "&7ᴘʀᴏᴄᴇᴇᴅ ᴡɪᴛʜ ᴅᴇʟɪᴠᴇʀʏ."
+    cancel:
+      name: "&c&lᴄᴀɴᴄᴇʟ"
+      lore:
+        - "&7ɢᴏ ʙᴀᴄᴋ ᴛᴏ ᴛʜᴇ ᴍᴀʀᴋᴇᴛᴘʟᴀᴄᴇ."
+
+  # ── GUI: Confirm Delivery ─────────────────────────────────────────────────
+  confirm-delivery:
+    title: "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ"
+    summary:
+      name: "&f&l{item}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ᴅᴇʟɪᴠᴇʀɪɴɢ: &f{count}"
+        - "&7ᴘᴀʏᴏᴜᴛ: &a{payout}"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+    confirm:
+      name: "&a&lᴄᴏɴꜰɪʀᴍ"
+      lore:
+        - "&7ᴄʟɪᴄᴋ ᴛᴏ ᴅᴇʟɪᴠᴇʀ ᴀɴᴅ ʀᴇᴄᴇɪᴠᴇ ᴘᴀʏᴍᴇɴᴛ."
+    cancel:
+      name: "&c&lᴄᴀɴᴄᴇʟ"
+      lore:
+        - "&7ɢᴏ ʙᴀᴄᴋ."
+
+  # ── GUI: Collect Stash ────────────────────────────────────────────────────
+  collect-stash:
+    title: "ᴄᴏʟʟᴇᴄᴛ"
+    collect-all:
+      name: "&a&lᴄᴏʟʟᴇᴄᴛ ᴀʟʟ"
+      lore:
+        - "&7ɢɪᴠᴇ ᴀʟʟ ɪᴛᴇᴍꜱ ᴛᴏ ʏᴏᴜʀ ɪɴᴠᴇɴᴛᴏʀʏ."
+        - "&7ᴏᴠᴇʀꜰʟᴏᴡ ᴡɪʟʟ ʙᴇ ᴅʀᴏᴘᴘᴇᴅ ᴀᴛ ʏᴏᴜʀ ꜰᴇᴇᴛ."
+    close:
+      name: "&c&lᴄʟᴏꜱᴇ"
+      lore:
+        - "&7ᴄʟᴏꜱᴇ ᴛʜɪꜱ ᴍᴇɴᴜ."

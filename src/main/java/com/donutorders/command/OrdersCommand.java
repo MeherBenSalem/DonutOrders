@@ -5,6 +5,7 @@ import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
 import com.donutorders.model.OrderStatus;
 import com.donutorders.scheduler.FoliaScheduler;
+import com.donutorders.util.MessageHelper;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -42,27 +43,23 @@ public class OrdersCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command,
                              String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(DonutOrders.colorize(
-                DonutOrders.getInstance().getMessages()
-                    .getString("player-only", "&cᴏɴʟʏ ᴘʟᴀʏᴇʀꜱ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ.")));
+            MessageHelper.send(sender, "player-only",
+                "&cᴏɴʟʏ ᴘʟᴀʏᴇʀꜱ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ.");
             return true;
         }
 
         // /orders admin subcommands
         if (args.length >= 2 && args[0].equalsIgnoreCase("admin")) {
             if (!player.hasPermission("donutorders.admin")) {
-                player.sendMessage(DonutOrders.colorize(
-                    DonutOrders.getInstance().getMessages()
-                        .getString("no-permission",
-                                   "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ.")));
+                MessageHelper.send(player, "no-permission",
+                    "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴅᴏ ᴛʜᴀᴛ.");
                 return true;
             }
 
             if (args[1].equalsIgnoreCase("reload")) {
                 DonutOrders.getInstance().reloadPluginConfig();
-                player.sendMessage(DonutOrders.colorize(
-                    DonutOrders.getInstance().getMessages()
-                        .getString("config-reloaded", "&aᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ ʀᴇʟᴏᴀᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ.")));
+                MessageHelper.send(player, "config-reloaded",
+                    "&aᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ ʀᴇʟᴏᴀᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ.");
                 return true;
             }
 
@@ -74,10 +71,8 @@ public class OrdersCommand implements CommandExecutor, TabCompleter {
 
         // Default: open Your Orders GUI
         if (!player.hasPermission("donutorders.use")) {
-            player.sendMessage(DonutOrders.colorize(
-                DonutOrders.getInstance().getMessages()
-                    .getString("no-permission",
-                               "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ.")));
+            MessageHelper.send(player, "no-permission",
+                "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴅᴏ ᴛʜᴀᴛ.");
             return true;
         }
 

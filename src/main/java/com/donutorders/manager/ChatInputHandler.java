@@ -2,6 +2,7 @@ package com.donutorders.manager;
 
 import com.donutorders.DonutOrders;
 import com.donutorders.scheduler.FoliaScheduler;
+import com.donutorders.util.MessageHelper;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -89,7 +90,8 @@ public class ChatInputHandler {
         ChatSession session = sessions.remove(player.getUniqueId());
         if (session == null) return false;
 
-        if (message.equalsIgnoreCase("cancel")) {
+        String cancelWord = MessageHelper.cancelKeyword();
+        if (message.equalsIgnoreCase(cancelWord)) {
             // Re-schedule cancel onto entity thread in case caller opens a GUI
             FoliaScheduler.runAtEntity(player,
                     session.onCancel::run,

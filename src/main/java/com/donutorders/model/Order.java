@@ -129,22 +129,10 @@ public class Order {
 
     /**
      * Returns a human-readable countdown, e.g. {@code "6d 18h 10m"}.
-     * Returns {@code "ᴇxᴘɪʀᴇᴅ"} when the order has already expired.
+     * Labels come from {@code messages.yml} ({@code time.*} keys).
      */
     public String getFormattedExpiry() {
-        long remaining = expiresAt - System.currentTimeMillis();
-        if (remaining <= 0) return "ᴇxᴘɪʀᴇᴅ";
-
-        long totalSeconds = remaining / 1000;
-        long days    = totalSeconds / 86400;
-        long hours   = (totalSeconds % 86400) / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-
-        StringBuilder sb = new StringBuilder();
-        if (days > 0)    sb.append(days).append("ᴅ ");
-        if (hours > 0)   sb.append(hours).append("ʜ ");
-        if (minutes > 0 || sb.length() == 0) sb.append(minutes).append("ᴍ");
-        return sb.toString().trim();
+        return com.donutorders.util.MessageHelper.formatExpiry(expiresAt);
     }
 
     /**

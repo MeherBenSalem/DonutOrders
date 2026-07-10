@@ -3,32 +3,21 @@ package com.donutorders.gui;
 import com.donutorders.DonutOrders;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.util.ItemUtils;
+import com.donutorders.util.MessageHelper;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
- * GUI: "ɴᴇᴡ ᴏʀᴅᴇʀ" — item picker for creating a buy order.
+ * GUI: item picker for creating a buy order.
  *
  * <p>Displays the materials listed in {@code items.yml}.
  * Clicking a material closes the GUI and starts the chat-input flow
  * (amount → price).
- *
- * <p>Layout (54 slots):
- * <pre>
- * [0–44]  Material picker buttons (paginated)
- * [45]    Previous-page button
- * [46]–[47] Filler
- * [48]    Filler
- * [49]    Filler
- * [50]–[52] Filler
- * [53]    Next-page button
- * </pre>
  */
 public class NewOrderGUI extends BaseGUI {
 
@@ -48,7 +37,8 @@ public class NewOrderGUI extends BaseGUI {
     }
 
     public NewOrderGUI(GUIManager guiManager, int page) {
-        super(Bukkit.createInventory(null, 54, "ɴᴇᴡ ᴏʀᴅᴇʀ"));
+        super(Bukkit.createInventory(null, 54,
+                MessageHelper.get("gui.new-order.title", "ɴᴇᴡ ᴏʀᴅᴇʀ")));
         this.guiManager = guiManager;
         this.materials  = loadAllowedMaterials();
         this.page       = page;
@@ -67,29 +57,32 @@ public class NewOrderGUI extends BaseGUI {
         for (int i = start; i < end; i++) {
             Material mat = materials.get(i);
             inventory.setItem(i - start, ItemUtils.createGuiItem(mat,
-                "§f" + ItemUtils.prettyName(mat),
-                Arrays.asList(
-                    "§8━━━━━━━━━━━━━━━━━━━━",
-                    "§7ʟᴇꜰᴛ ᴄʟɪᴄᴋ §eᴛᴏ ꜱᴇʟᴇᴄᴛ",
-                    "§8━━━━━━━━━━━━━━━━━━━━"
-                )));
+                MessageHelper.getNamed("gui.new-order.material.name", "&f{item}",
+                    "item", ItemUtils.prettyName(mat)),
+                MessageHelper.getList("gui.new-order.material.lore")));
         }
 
-        // Pagination
         if (page > 0) {
             inventory.setItem(SLOT_PREV, ItemUtils.createGuiItem(
-                Material.ARROW, "§7« ᴘʀᴇᴠɪᴏᴜꜱ",
-                Arrays.asList("§8ᴘᴀɢᴇ " + page + " ᴏꜰ " + (maxPage + 1))));
+                Material.ARROW,
+                MessageHelper.get("buttons.previous.name", "&7« ᴘʀᴇᴠɪᴏᴜꜱ"),
+                MessageHelper.getList("buttons.previous.lore",
+                    "page", String.valueOf(page),
+                    "max_page", String.valueOf(maxPage + 1))));
         }
         if (page < maxPage) {
             inventory.setItem(SLOT_NEXT, ItemUtils.createGuiItem(
-                Material.ARROW, "§7ɴᴇxᴛ »",
-                Arrays.asList("§8ᴘᴀɢᴇ " + (page + 2) + " ᴏꜰ " + (maxPage + 1))));
+                Material.ARROW,
+                MessageHelper.get("buttons.next.name", "&7ɴᴇxᴛ »"),
+                MessageHelper.getList("buttons.next.lore",
+                    "page", String.valueOf(page + 2),
+                    "max_page", String.valueOf(maxPage + 1))));
         }
 
         inventory.setItem(SLOT_BACK, ItemUtils.createGuiItem(
-            Material.BARRIER, "§c§lʙᴀᴄᴋ",
-            Arrays.asList("§7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ.")));
+            Material.BARRIER,
+            MessageHelper.get("gui.new-order.back.name", "&c&lʙᴀᴄᴋ"),
+            MessageHelper.getList("gui.new-order.back.lore")));
 
         fillEmpty();
     }
@@ -97,7 +90,7 @@ public class NewOrderGUI extends BaseGUI {
     @Override
     public void handleClick(Player player, int slot, ItemStack clicked, ClickType type) {
         if (slot == SLOT_PREV && page > 0) {
-            guiManager.openNewOrderPicker(player); // Will rebuild at page 0; replace with page-1 variant if needed
+            guiManager.openNewOrderPicker(player);
             return;
         }
         if (slot == SLOT_NEXT && page < maxPage) {
@@ -105,8 +98,6 @@ public class NewOrderGUI extends BaseGUI {
             if (state != null) {
                 NewOrderGUI next = new NewOrderGUI(guiManager, page + 1);
                 state.gui = next;
-                // openInventory fires InventoryCloseEvent which calls clearState();
-                // re-register the state afterwards so the new page is protected.
                 player.openInventory(next.getInventory());
                 guiManager.setState(player.getUniqueId(), state);
             }
@@ -117,32 +108,27 @@ public class NewOrderGUI extends BaseGUI {
             return;
         }
 
-        // Material selection
         int matIndex = page * PAGE_SIZE + slot;
         if (slot < PAGE_SIZE && matIndex < materials.size()) {
             Material selectedMat = materials.get(matIndex);
             ItemStack template   = new ItemStack(selectedMat, 1);
 
-            // Store selected item in GUI state so chat callbacks can retrieve it
             GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
             if (state != null) {
                 state.selectedItem = template;
             }
 
-            // Close GUI before entering chat mode
             player.closeInventory();
 
-            // Start the chat input flow: first ask for amount
-            String amtPrompt = DonutOrders.getInstance().getMessages()
-                    .getString("chat-prompt-amount",
-                               "&eᴇɴᴛᴇʀ ᴛʜᴇ ᴀᴍᴏᴜɴᴛ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙᴜʏ (ᴏʀ &cᴄᴀɴᴄᴇʟ&e):");
+            String cancelWord = MessageHelper.cancelKeyword();
+            String amtPrompt = MessageHelper.get("chat-prompt-amount",
+                    "&eᴇɴᴛᴇʀ ᴛʜᴇ ᴀᴍᴏᴜɴᴛ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙᴜʏ (ᴏʀ &c{0}&e):",
+                    cancelWord);
 
             guiManager.getChatInput().requestInput(player, amtPrompt,
                 amountStr -> handleAmountInput(player, template, amountStr),
                 () -> {
-                    player.sendMessage(DonutOrders.colorize(
-                        DonutOrders.getInstance().getMessages()
-                            .getString("chat-input-cancelled", "&7ɪɴᴘᴜᴛ ᴄᴀɴᴄᴇʟʟᴇᴅ.")));
+                    MessageHelper.send(player, "chat-input-cancelled", "&7ɪɴᴘᴜᴛ ᴄᴀɴᴄᴇʟʟᴇᴅ.");
                     guiManager.openYourOrders(player, 0);
                 }
             );
@@ -157,34 +143,29 @@ public class NewOrderGUI extends BaseGUI {
             amount = Integer.parseInt(raw);
             if (amount <= 0) throw new NumberFormatException();
         } catch (NumberFormatException e) {
-            player.sendMessage(DonutOrders.colorize(
-                DonutOrders.getInstance().getMessages()
-                    .getString("chat-input-invalid-number",
-                               "&cɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ᴡʜᴏʟᴇ ɴᴜᴍʙᴇʀ.")));
-            // Re-request
+            MessageHelper.send(player, "chat-input-invalid-number",
+                "&cɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ᴡʜᴏʟᴇ ɴᴜᴍʙᴇʀ.");
+            String cancelWord = MessageHelper.cancelKeyword();
             guiManager.getChatInput().requestInput(player,
-                DonutOrders.getInstance().getMessages()
-                    .getString("chat-prompt-amount", "&eᴇɴᴛᴇʀ ᴀᴍᴏᴜɴᴛ:"),
+                MessageHelper.get("chat-prompt-amount",
+                    "&eᴇɴᴛᴇʀ ᴛʜᴇ ᴀᴍᴏᴜɴᴛ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙᴜʏ (ᴏʀ &c{0}&e):", cancelWord),
                 s -> handleAmountInput(player, template, s),
                 () -> guiManager.openYourOrders(player, 0));
             return;
         }
 
-        // Store pending amount in state
         GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
         if (state != null) state.pendingAmount = amount;
 
         final int finalAmount = amount;
-        String pricePrompt = DonutOrders.getInstance().getMessages()
-                .getString("chat-prompt-price",
-                           "&eᴇɴᴛᴇʀ ᴘʀɪᴄᴇ ᴘᴇʀ ɪᴛᴇᴍ (ᴏʀ &cᴄᴀɴᴄᴇʟ&e):");
+        String cancelWord = MessageHelper.cancelKeyword();
+        String pricePrompt = MessageHelper.get("chat-prompt-price",
+                "&eᴇɴᴛᴇʀ ᴘʀɪᴄᴇ ᴘᴇʀ ɪᴛᴇᴍ (ᴏʀ &c{0}&e):", cancelWord);
 
         guiManager.getChatInput().requestInput(player, pricePrompt,
             priceStr -> handlePriceInput(player, template, finalAmount, priceStr),
             () -> {
-                player.sendMessage(DonutOrders.colorize(
-                    DonutOrders.getInstance().getMessages()
-                        .getString("chat-input-cancelled", "&7ɪɴᴘᴜᴛ ᴄᴀɴᴄᴇʟʟᴇᴅ.")));
+                MessageHelper.send(player, "chat-input-cancelled", "&7ɪɴᴘᴜᴛ ᴄᴀɴᴄᴇʟʟᴇᴅ.");
                 guiManager.openYourOrders(player, 0);
             }
         );
@@ -196,34 +177,32 @@ public class NewOrderGUI extends BaseGUI {
             price = Double.parseDouble(raw);
             if (price <= 0) throw new NumberFormatException();
         } catch (NumberFormatException e) {
-            player.sendMessage(DonutOrders.colorize(
-                DonutOrders.getInstance().getMessages()
-                    .getString("chat-input-invalid-price",
-                               "&cɪɴᴠᴀʟɪᴅ ᴘʀɪᴄᴇ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ.")));
+            MessageHelper.send(player, "chat-input-invalid-price",
+                "&cɪɴᴠᴀʟɪᴅ ᴘʀɪᴄᴇ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ.");
+            String cancelWord = MessageHelper.cancelKeyword();
             guiManager.getChatInput().requestInput(player,
-                DonutOrders.getInstance().getMessages()
-                    .getString("chat-prompt-price", "&eᴇɴᴛᴇʀ ᴘʀɪᴄᴇ ᴘᴇʀ ɪᴛᴇᴍ:"),
+                MessageHelper.get("chat-prompt-price",
+                    "&eᴇɴᴛᴇʀ ᴘʀɪᴄᴇ ᴘᴇʀ ɪᴛᴇᴍ (ᴏʀ &c{0}&e):", cancelWord),
                 s -> handlePriceInput(player, template, amount, s),
                 () -> guiManager.openYourOrders(player, 0));
             return;
         }
 
         final double finalPrice = price;
-        // Create the order via OrderManager; result is delivered on player's thread
         guiManager.getOrderManager().createOrder(player, template, amount, finalPrice,
             (success, errorMsg) -> {
                 if (success) {
-                    String msg = DonutOrders.getInstance().getMessages()
-                        .getString("order-created",
-                            "&aᴏʀᴅᴇʀ ᴄʀᴇᴀᴛᴇᴅ!")
-                        .replace("{0}", ItemUtils.prettyName(template.getType()))
-                        .replace("{1}", String.valueOf(amount))
-                        .replace("{2}", com.donutorders.util.NumberFormatter.formatPrice(finalPrice))
-                        .replace("{3}", com.donutorders.util.NumberFormatter.formatPrice(finalPrice * amount));
-                    player.sendMessage(DonutOrders.colorize(
-                        DonutOrders.getInstance().getMessages().getString("prefix", "") + msg));
+                    MessageHelper.sendPrefixed(player, "order-created",
+                        "&aᴏʀᴅᴇʀ ᴄʀᴇᴀᴛᴇᴅ!",
+                        ItemUtils.prettyName(template.getType()),
+                        String.valueOf(amount),
+                        com.donutorders.util.NumberFormatter.formatPrice(finalPrice),
+                        com.donutorders.util.NumberFormatter.formatPrice(finalPrice * amount));
                 } else {
-                    player.sendMessage(DonutOrders.colorize("§c" + errorMsg));
+                    // errorMsg is already colorized from OrderManager / MessageHelper
+                    player.sendMessage(errorMsg != null ? errorMsg
+                            : MessageHelper.get("order-create-failed",
+                                "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴏʀᴅᴇʀ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."));
                 }
                 guiManager.openYourOrders(player, 0);
             });

@@ -20,6 +20,9 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -148,9 +151,9 @@ public class DonutOrders extends JavaPlugin {
         }
 
         ordersCmd.setExecutor((sender, command, label, args) -> {
-            sender.sendMessage(DonutOrders.colorize(
-                getMessages().getString("plugin-starting",
-                    "&eDonutOrders is still starting. Please try again in a moment.")));
+            sender.sendMessage(com.donutorders.util.MessageHelper.get(
+                "plugin-starting",
+                "&eᴅᴏɴᴜᴛᴏʀᴅᴇʀꜱ ɪꜱ ꜱᴛɪʟʟ ꜱᴛᴀʀᴛɪɴɢ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ɪɴ ᴀ ᴍᴏᴍᴇɴᴛ."));
             return true;
         });
         ordersCmd.setTabCompleter((sender, command, alias, args) -> Collections.emptyList());
@@ -178,10 +181,23 @@ public class DonutOrders extends JavaPlugin {
         }
     }
 
+    /**
+     * Reloads {@code messages.yml} from the data folder and attaches jar
+     * defaults so missing keys fall back to English without a reinstall.
+     */
     private void reloadMessages() {
         saveResourceIfAbsent("messages.yml");
         File file = new File(getDataFolder(), "messages.yml");
         messages = YamlConfiguration.loadConfiguration(file);
+
+        // Jar defaults: any key absent from the server's messages.yml still resolves
+        InputStream defStream = getResource("messages.yml");
+        if (defStream != null) {
+            YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(defStream, StandardCharsets.UTF_8));
+            messages.setDefaults(defaults);
+            messages.options().copyDefaults(false);
+        }
     }
 
     /** Returns the loaded messages.yml configuration. */

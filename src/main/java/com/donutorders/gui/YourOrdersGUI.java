@@ -4,31 +4,18 @@ import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
 import com.donutorders.model.OrderStatus;
 import com.donutorders.util.ItemUtils;
+import com.donutorders.util.MessageHelper;
 import com.donutorders.util.NumberFormatter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
- * GUI: "ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ" — the buyer's personal order management screen.
- *
- * <p>Layout (54 slots):
- * <pre>
- * [0–44]  Player's own orders
- * [45]    Previous-page button
- * [46]    Filler
- * [47]    Filler
- * [48]    "ʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ" button
- * [49]    "ɴᴇᴡ ᴏʀᴅᴇʀ" button (lime glass)
- * [50]–[52] Filler
- * [53]    Next-page button
- * </pre>
+ * GUI: the buyer's personal order management screen.
  */
 public class YourOrdersGUI extends BaseGUI {
 
@@ -44,7 +31,8 @@ public class YourOrdersGUI extends BaseGUI {
     private final int maxPage;
 
     public YourOrdersGUI(GUIManager guiManager, List<Order> orders, int page) {
-        super(Bukkit.createInventory(null, 54, "ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ"));
+        super(Bukkit.createInventory(null, 54,
+                MessageHelper.get("gui.your-orders.title", "ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ")));
         this.guiManager = guiManager;
         this.orders     = orders;
         this.page       = page;
@@ -60,69 +48,63 @@ public class YourOrdersGUI extends BaseGUI {
             inventory.setItem(i - start, buildOrderItem(orders.get(i)));
         }
 
-        // Navigation
         if (page > 0) {
             inventory.setItem(SLOT_PREV, ItemUtils.createGuiItem(
-                Material.ARROW, "§7« ᴘʀᴇᴠɪᴏᴜꜱ",
-                Arrays.asList("§8ᴘᴀɢᴇ " + page + " ᴏꜰ " + (maxPage + 1))));
+                Material.ARROW,
+                MessageHelper.get("buttons.previous.name", "&7« ᴘʀᴇᴠɪᴏᴜꜱ"),
+                MessageHelper.getList("buttons.previous.lore",
+                    "page", String.valueOf(page),
+                    "max_page", String.valueOf(maxPage + 1))));
         }
         if (page < maxPage) {
             inventory.setItem(SLOT_NEXT, ItemUtils.createGuiItem(
-                Material.ARROW, "§7ɴᴇxᴛ »",
-                Arrays.asList("§8ᴘᴀɢᴇ " + (page + 2) + " ᴏꜰ " + (maxPage + 1))));
+                Material.ARROW,
+                MessageHelper.get("buttons.next.name", "&7ɴᴇxᴛ »"),
+                MessageHelper.getList("buttons.next.lore",
+                    "page", String.valueOf(page + 2),
+                    "max_page", String.valueOf(maxPage + 1))));
         }
 
         inventory.setItem(SLOT_NEW, ItemUtils.createGuiItem(
             Material.LIME_STAINED_GLASS_PANE,
-            "§a§lɴᴇᴡ ᴏʀᴅᴇʀ",
-            Arrays.asList("§7ᴄʀᴇᴀᴛᴇ ᴀ ɴᴇᴡ ʙᴜʏ ᴏʀᴅᴇʀ.")));
+            MessageHelper.get("gui.your-orders.new-order.name", "&a&lɴᴇᴡ ᴏʀᴅᴇʀ"),
+            MessageHelper.getList("gui.your-orders.new-order.lore")));
 
         inventory.setItem(SLOT_BROWSE, ItemUtils.createGuiItem(
             Material.COMPASS,
-            "§b§lʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ",
-            Arrays.asList("§7ᴠɪᴇᴡ ᴀʟʟ ᴘᴜʙʟɪᴄ ᴏʀᴅᴇʀꜱ.")));
+            MessageHelper.get("gui.your-orders.browse-market.name", "&b&lʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ"),
+            MessageHelper.getList("gui.your-orders.browse-market.lore")));
 
         fillEmpty();
     }
 
     private ItemStack buildOrderItem(Order order) {
         Material mat = order.getItemTemplate().getType();
-        String statusColor = switch (order.getStatus()) {
-            case ACTIVE    -> "§a";
-            case COMPLETED -> "§b";
-            case EXPIRED   -> "§6";
-            case CANCELLED -> "§c";
-            case PENDING   -> "§e";
-            case CLAIMED   -> "§8";
-        };
-        String statusName = switch (order.getStatus()) {
-            case ACTIVE    -> "ᴀᴄᴛɪᴠᴇ";
-            case COMPLETED -> "ᴄᴏᴍᴘʟᴇᴛᴇᴅ";
-            case EXPIRED   -> "ᴇxᴘɪʀᴇᴅ";
-            case CANCELLED -> "ᴄᴀɴᴄᴇʟʟᴇᴅ";
-            case PENDING   -> "ᴘᴇɴᴅɪɴɢ ᴄᴏʟʟᴇᴄᴛɪᴏɴ";
-            case CLAIMED   -> "ᴄʟᴀɪᴍᴇᴅ";
-        };
+        String statusColor = MessageHelper.statusColor(order.getStatus());
+        String statusName  = MessageHelper.statusName(order.getStatus());
 
         boolean hasStash = order.getStatus() == OrderStatus.PENDING
                 || order.getAmountFulfilled() > 0
                 || order.getStatus() == OrderStatus.EXPIRED
                 || order.getStatus() == OrderStatus.CANCELLED;
 
+        String stashLine = hasStash
+                ? MessageHelper.get("gui.your-orders.stash-has-items", "&e⬛ ꜱᴛᴀꜱʜ ʜᴀꜱ ɪᴛᴇᴍꜱ")
+                : MessageHelper.get("gui.your-orders.stash-empty", "&7ꜱᴛᴀꜱʜ ɪꜱ ᴇᴍᴘᴛʏ");
+
         return ItemUtils.createGuiItem(mat,
-            statusColor + ItemUtils.prettyName(mat),
-            Arrays.asList(
-                "§8━━━━━━━━━━━━━━━━━━━━",
-                "§7ꜱᴛᴀᴛᴜꜱ: " + statusColor + statusName,
-                "§7ᴘʀᴏɢʀᴇꜱꜱ: §f"
-                    + NumberFormatter.format(order.getAmountFulfilled())
-                    + " §7/ §f" + NumberFormatter.format(order.getAmountRequested()),
-                "§7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: §a" + NumberFormatter.formatPrice(order.getPricePerItem()),
-                "§7ᴇxᴘɪʀᴇꜱ: §e" + order.getFormattedExpiry(),
-                hasStash ? "§e⬛ ꜱᴛᴀꜱʜ ʜᴀꜱ ɪᴛᴇᴍꜱ" : "§7ꜱᴛᴀꜱʜ ɪꜱ ᴇᴍᴘᴛʏ",
-                "§8━━━━━━━━━━━━━━━━━━━━",
-                "§eʟᴇꜰᴛ ᴄʟɪᴄᴋ §7ᴛᴏ ᴠɪᴇᴡ ᴅᴇᴛᴀɪʟꜱ"
-            ));
+            MessageHelper.getNamed("gui.your-orders.order-item.name",
+                "{status_color}{item}",
+                "status_color", statusColor,
+                "item", ItemUtils.prettyName(mat)),
+            MessageHelper.getList("gui.your-orders.order-item.lore",
+                "status_color", statusColor,
+                "status", statusName,
+                "fulfilled", NumberFormatter.format(order.getAmountFulfilled()),
+                "requested", NumberFormatter.format(order.getAmountRequested()),
+                "price", NumberFormatter.formatPrice(order.getPricePerItem()),
+                "expiry", order.getFormattedExpiry(),
+                "stash_line", stashLine));
     }
 
     @Override

@@ -6,7 +6,7 @@ import com.donutorders.model.OrderStatus;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
 import com.donutorders.util.DeliveryItemUtils;
-import com.donutorders.util.ItemUtils;
+import com.donutorders.util.MessageHelper;
 import com.donutorders.util.NumberFormatter;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
@@ -86,11 +86,12 @@ public class OrderManager {
         long activeCount = existing.stream()
                 .filter(o -> o.getStatus() == OrderStatus.ACTIVE).count();
         if (activeCount >= maxOrders) {
-            // Bounce to player thread before calling callback (player's GUI is there)
+            String msg = MessageHelper.get("max-orders-reached",
+                    "&cʏᴏᴜ ʜᴀᴠᴇ ʀᴇᴀᴄʜᴇᴅ ᴛʜᴇ ᴍᴀxɪᴍᴜᴍ ɴᴜᴍʙᴇʀ ᴏꜰ ᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ ({0}).",
+                    maxOrders);
             FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false,
-                            "ᴍᴀx ᴏʀᴅᴇʀ ʟɪᴍɪᴛ: " + maxOrders),
-                    () -> callback.accept(false, "ᴍᴀx ᴏʀᴅᴇʀ ʟɪᴍɪᴛ"));
+                    () -> callback.accept(false, msg),
+                    () -> callback.accept(false, msg));
             return;
         }
 
@@ -98,9 +99,11 @@ public class OrderManager {
         if (itemsManager == null
                 || itemTemplate == null
                 || !itemsManager.isAllowed(itemTemplate.getType())) {
+            String msg = MessageHelper.get("item-not-allowed",
+                    "&cᴛʜᴀᴛ ɪᴛᴇᴍ ɪꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ ꜰᴏʀ ᴏʀᴅᴇʀꜱ.");
             FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false, "ɪᴛᴇᴍ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ"),
-                    () -> callback.accept(false, "ɪᴛᴇᴍ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ"));
+                    () -> callback.accept(false, msg),
+                    () -> callback.accept(false, msg));
             return;
         }
 
@@ -113,11 +116,10 @@ public class OrderManager {
         // Vault operations MUST run on the entity's region thread.
         FoliaScheduler.runAtEntity(buyer, () -> {
             if (!economy.has(buyer, taxedTotal)) {
-                callback.accept(false,
-                        "ɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜰᴜɴᴅꜱ. ɴᴇᴇᴅ "
-                        + NumberFormatter.formatPrice(taxedTotal)
-                        + ", ʜᴀᴠᴇ "
-                        + NumberFormatter.formatPrice(economy.getBalance(buyer)));
+                callback.accept(false, MessageHelper.get("insufficient-funds",
+                        "&cɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜰᴜɴᴅꜱ. ʏᴏᴜ ɴᴇᴇᴅ &f{0}&c ʙᴜᴛ ᴏɴʟʏ ʜᴀᴠᴇ &f{1}&c.",
+                        NumberFormatter.formatPrice(taxedTotal),
+                        NumberFormatter.formatPrice(economy.getBalance(buyer))));
                 return;
             }
 
@@ -150,7 +152,8 @@ public class OrderManager {
                             () -> callback.accept(true, null),
                             () -> callback.accept(true, null)));
 
-        }, () -> callback.accept(false, "ʀᴇᴛɪʀᴇᴅ"));
+        }, () -> callback.accept(false, MessageHelper.get("player-retired",
+                "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ.")));
     }
 
     // ── Fulfill (Deliver items) ────────────────────────────────────────────────
@@ -177,23 +180,28 @@ public class OrderManager {
 
         Order order = storage.getOrder(orderId);
         if (order == null) {
+            String msg = MessageHelper.get("order-not-found", "&cᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ.");
             FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, "ᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ"),
-                    () -> callback.accept(false, "ᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ"));
+                    () -> callback.accept(false, msg),
+                    () -> callback.accept(false, msg));
             return;
         }
 
         if (order.getStatus() != OrderStatus.ACTIVE) {
+            String msg = MessageHelper.get("order-no-longer-active",
+                    "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ.");
             FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, "ᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ"),
-                    () -> callback.accept(false, "ᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ"));
+                    () -> callback.accept(false, msg),
+                    () -> callback.accept(false, msg));
             return;
         }
 
         if (order.getBuyerUUID().equals(seller.getUniqueId())) {
+            String msg = MessageHelper.get("delivery-own-order",
+                    "&cʏᴏᴜ ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀ.");
             FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, "ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ᴏᴡɴ ᴏʀᴅᴇʀ"),
-                    () -> callback.accept(false, "ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ᴏᴡɴ ᴏʀᴅᴇʀ"));
+                    () -> callback.accept(false, msg),
+                    () -> callback.accept(false, msg));
             return;
         }
 
@@ -205,17 +213,21 @@ public class OrderManager {
                 amountNeeded);
 
         if (validCount == 0) {
+            String msg = MessageHelper.get("delivery-no-items",
+                    "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ.");
             FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ"),
-                    () -> callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ"));
+                    () -> callback.accept(false, msg),
+                    () -> callback.accept(false, msg));
             return;
         }
 
         // Acquire delivery lock — prevents concurrent duplicate deliveries
         if (!order.tryLockDelivery()) {
+            String msg = MessageHelper.get("delivery-in-progress",
+                    "&cᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ.");
             FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, "ᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ"),
-                    () -> callback.accept(false, "ᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ"));
+                    () -> callback.accept(false, msg),
+                    () -> callback.accept(false, msg));
             return;
         }
 
@@ -226,7 +238,8 @@ public class OrderManager {
                         DeliveryItemUtils.countAvailable(seller, items, template),
                         amountNeeded);
                 if (deliverCount == 0) {
-                    callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ");
+                    callback.accept(false, MessageHelper.get("delivery-no-items",
+                            "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
                     return;
                 }
 
@@ -239,7 +252,8 @@ public class OrderManager {
                     }
                 }
                 if (extractedCount == 0) {
-                    callback.accept(false, "ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ");
+                    callback.accept(false, MessageHelper.get("delivery-no-items",
+                            "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
                     return;
                 }
 
@@ -276,7 +290,8 @@ public class OrderManager {
             }
         }, () -> {
             order.unlockDelivery();
-            callback.accept(false, "ʀᴇᴛɪʀᴇᴅ");
+            callback.accept(false, MessageHelper.get("player-retired",
+                    "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ."));
         });
     }
 
@@ -457,14 +472,9 @@ public class OrderManager {
                 Player buyer = Bukkit.getPlayer(order.getBuyerUUID());
                 if (buyer != null && buyer.isOnline()) {
                     FoliaScheduler.runAtEntity(buyer, () -> {
-                        String msg = DonutOrders.getInstance().getMessages()
-                                .getString("order-expired",
-                                        "&7ʏᴏᴜʀ ᴏʀᴅᴇʀ ʜᴀꜱ ᴇxᴘɪʀᴇᴅ.")
-                                .replace("{0}", NumberFormatter.formatPrice(
-                                        order.getPricePerItem() * order.getAmountRequested()));
-                        buyer.sendMessage(DonutOrders.colorize(
-                                DonutOrders.getInstance().getMessages()
-                                        .getString("prefix", "") + msg));
+                        MessageHelper.sendPrefixed(buyer, "order-expired",
+                                "&7ʏᴏᴜʀ ᴏʀᴅᴇʀ ʜᴀꜱ ᴇxᴘɪʀᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ.",
+                                NumberFormatter.formatPrice(order.getRemainingFunds()));
                     }, null);
                 }
             }
