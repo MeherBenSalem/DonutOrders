@@ -90,17 +90,11 @@ public class NewOrderGUI extends BaseGUI {
     @Override
     public void handleClick(Player player, int slot, ItemStack clicked, ClickType type) {
         if (slot == SLOT_PREV && page > 0) {
-            guiManager.openNewOrderPicker(player);
+            guiManager.openNewOrderPicker(player, page - 1);
             return;
         }
         if (slot == SLOT_NEXT && page < maxPage) {
-            GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
-            if (state != null) {
-                NewOrderGUI next = new NewOrderGUI(guiManager, page + 1);
-                state.gui = next;
-                player.openInventory(next.getInventory());
-                guiManager.setState(player.getUniqueId(), state);
-            }
+            guiManager.openNewOrderPicker(player, page + 1);
             return;
         }
         if (slot == SLOT_BACK) {

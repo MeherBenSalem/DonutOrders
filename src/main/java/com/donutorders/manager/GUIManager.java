@@ -102,10 +102,15 @@ public class GUIManager {
         }, null);
     }
 
-    /** Opens the item picker for creating a new order. */
+    /** Opens the item picker for creating a new order (first page). */
     public void openNewOrderPicker(Player player) {
+        openNewOrderPicker(player, 0);
+    }
+
+    /** Opens the item picker for creating a new order on the given page. */
+    public void openNewOrderPicker(Player player, int page) {
         FoliaScheduler.runAtEntity(player, () -> {
-            NewOrderGUI gui = new NewOrderGUI(this);
+            NewOrderGUI gui = new NewOrderGUI(this, Math.max(0, page));
 
             PlayerGUIState state = new PlayerGUIState();
             state.type = GUIType.NEW_ORDER;
