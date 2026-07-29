@@ -7,8 +7,11 @@ update-check:
   enabled: true
 
 orders:
-  # Maximum simultaneous active orders a single player can hold.
-  max-per-player: 10
+  # Default maximum simultaneous active orders (no rank/permission override).
+  default-limit: 2
+
+  # Legacy alias — kept in sync with default-limit for older configs.
+  max-per-player: 2
 
   # How many days an order lives before it expires and is refunded.
   default-expiry-days: 7
@@ -24,5 +27,11 @@ database:
 gui:
   # How many order entries to show per page on the public orders GUI.
   orders-per-page: 45
+
+# Per-rank active order limits (LuckPerms group.<rank> permission).
+# Highest matching rank wins. Override with donutorders.limit.<n> permissions.
+rank-limits:
+  default: 2
+  vip: 5
 
 # Allowed order materials are configured in items.yml.

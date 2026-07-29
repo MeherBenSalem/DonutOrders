@@ -1,5 +1,5 @@
 # Dual-publish NightBeam mods/plugins to Modrinth + CurseForge on version tags.
-# Copy to each mod repo as: .github/workflows/publish.yml
+# Supports Gradle (build/libs) and Maven (target/) projects.
 #
 # Org/repo secrets:
 #   MODRINTH_TOKEN
@@ -56,8 +56,14 @@ jobs:
           java-version: "21"
 
       - uses: gradle/actions/setup-gradle@v4
+        if: ${{ hashFiles('**/gradlew', '**/build.gradle*', '**/settings.gradle*') != '' && hashFiles('pom.xml') == '' }}
 
-      - name: Build
+      - name: Build (Maven)
+        if: ${{ hashFiles('pom.xml') != '' }}
+        run: mvn -B -q -DskipTests package
+
+      - name: Build (Gradle)
+        if: ${{ hashFiles('pom.xml') == '' }}
         run: |
           chmod +x gradlew 2>/dev/null || true
           if [ -f gradlew ]; then ./gradlew build --no-daemon
@@ -68,11 +74,15 @@ jobs:
         id: jars
         shell: bash
         run: |
-          mapfile -t JARS < <(find . -type f -path "*/build/libs/*.jar" \
-            ! -name "*-sources.jar" ! -name "*-javadoc.jar" \
-            ! -name "*-dev.jar" ! -name "*-dev-shadow.jar" | head -n 20)
+          mapfile -t JARS < <(
+            find . -type f \( -path "*/build/libs/*.jar" -o -path "./target/*.jar" \) \
+              ! -name "*-sources.jar" ! -name "*-javadoc.jar" \
+              ! -name "*-dev.jar" ! -name "*-dev-shadow.jar" \
+              ! -name "original-*" ! -name "*-tests.jar" \
+              | head -n 20
+          )
           if [ ${#JARS[@]} -eq 0 ]; then
-            echo "No jars in build/libs" >&2
+            echo "No jars found in build/libs or target" >&2
             exit 1
           fi
           printf '%s\n' "${JARS[@]}"
@@ -104,30 +114,52 @@ jobs:
           const path = require('path');
           const version = process.env.VERSION;
           const jars = process.env.JAR_LIST.split(/\n/).map(s => s.trim()).filter(Boolean);
-          const loaders = new Set();
-          const gvs = new Set();
-          for (const jar of jars) {
-            const n = path.basename(jar).toLowerCase();
-            if (n.includes('neoforge')) loaders.add('neoforge');
-            else if (n.includes('fabric')) loaders.add('fabric');
-            else if (n.includes('quilt')) loaders.add('quilt');
-            else if (n.includes('forge')) loaders.add('forge');
-            else loaders.add('fabric');
-            const m = n.match(/1\.\d+(?:\.\d+)?/);
-            if (m) gvs.add(m[0]);
-          }
-          if (!gvs.size) gvs.add('1.21.1');
+          // Plugin jars (DonutOrders, etc.) — prefer paper family loaders
+          const base = jars.map(j => path.basename(j).toLowerCase()).join(' ');
+          const isPlugin = /donut|paper|spigot|bukkit|folia|purpur/.test(base) || !/(fabric|forge|neoforge|quilt)/.test(base);
+          const loaders = isPlugin
+            ? ['paper', 'bukkit', 'spigot', 'purpur', 'folia']
+            : (() => {
+                const s = new Set();
+                for (const jar of jars) {
+                  const n = path.basename(jar).toLowerCase();
+                  if (n.includes('neoforge')) s.add('neoforge');
+                  else if (n.includes('fabric')) s.add('fabric');
+                  else if (n.includes('quilt')) s.add('quilt');
+                  else if (n.includes('forge')) s.add('forge');
+                  else s.add('fabric');
+                }
+                return [...s];
+              })();
+          const gvs = isPlugin
+            ? ['1.20.6', '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6', '1.21.7', '1.21.8']
+            : (() => {
+                const s = new Set();
+                for (const jar of jars) {
+                  const m = path.basename(jar).toLowerCase().match(/1\.\d+(?:\.\d+)?/);
+                  if (m) s.add(m[0]);
+                }
+                if (!s.size) s.add('1.21.1');
+                return [...s];
+              })();
+
+          // Prefer a single primary jar (skip original-*)
+          const primaryJars = jars.filter(j => !path.basename(j).startsWith('original-'));
+          const uploadJars = primaryJars.length ? [primaryJars[0]] : [jars[0]];
 
           (async () => {
-            const fileParts = jars.map((_, i) => `file_${i}`);
+            const changelog = fs.existsSync(`DonutOrders-${version}-PatchNotes.md`)
+              ? fs.readFileSync(`DonutOrders-${version}-PatchNotes.md`, 'utf8')
+              : `Release ${version}`;
+            const fileParts = uploadJars.map((_, i) => `file_${i}`);
             const body = {
               name: version,
               version_number: version,
-              changelog: `Release ${version}`,
+              changelog,
               dependencies: [],
-              game_versions: [...gvs],
+              game_versions: gvs,
               version_type: 'release',
-              loaders: [...loaders],
+              loaders,
               featured: false,
               status: 'listed',
               project_id: process.env.MODRINTH_ID,
@@ -136,8 +168,8 @@ jobs:
             };
             const form = new FormData();
             form.append('data', JSON.stringify(body));
-            for (let i = 0; i < jars.length; i++) {
-              form.append(fileParts[i], new Blob([fs.readFileSync(jars[i])]), path.basename(jars[i]));
+            for (let i = 0; i < uploadJars.length; i++) {
+              form.append(fileParts[i], new Blob([fs.readFileSync(uploadJars[i])]), path.basename(uploadJars[i]));
             }
             const mrRes = await fetch('https://api.modrinth.com/v2/version', {
               method: 'POST',
@@ -154,15 +186,15 @@ jobs:
             const gvJson = await gvRes.json();
             const flat = [];
             for (const g of gvJson.data || []) for (const v of g.versions || []) flat.push(v);
-            const gameVersionIds = [...gvs].map((want) => {
+            const gameVersionIds = gvs.map((want) => {
               const hit = flat.find((v) => v.name === want);
               if (!hit) throw new Error('No CF game version for ' + want);
               return hit.id;
             });
 
-            for (const jar of jars) {
+            for (const jar of uploadJars) {
               const meta = {
-                changelog: `Release ${version}`,
+                changelog,
                 changelogType: 'markdown',
                 displayName: path.basename(jar),
                 gameVersions: gameVersionIds,

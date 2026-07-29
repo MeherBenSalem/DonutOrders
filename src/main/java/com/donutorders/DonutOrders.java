@@ -3,11 +3,17 @@ package com.donutorders;
 import com.donutorders.command.OrdersCommand;
 import com.donutorders.listener.ChatListener;
 import com.donutorders.listener.InventoryListener;
+import com.donutorders.listener.LuckPermsLimitListener;
+import com.donutorders.listener.PlayerJoinListener;
 import com.donutorders.listener.PlayerQuitListener;
 import com.donutorders.manager.AllowedItemsManager;
 import com.donutorders.manager.ChatInputHandler;
 import com.donutorders.manager.GUIManager;
+import com.donutorders.manager.OrderLimitManager;
 import com.donutorders.manager.OrderManager;
+import com.donutorders.placeholder.DonutOrdersExpansion;
+import net.luckperms.api.LuckPerms;
+import org.bukkit.Bukkit;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
 import com.donutorders.util.ModrinthUpdateChecker;
@@ -55,6 +61,7 @@ public class DonutOrders extends JavaPlugin {
     private ChatInputHandler     chatInputHandler;
     private GUIManager           guiManager;
     private AllowedItemsManager  allowedItemsManager;
+    private OrderLimitManager    orderLimitManager;
 
     /** The loaded messages.yml configuration. */
     private FileConfiguration messages;
@@ -108,9 +115,10 @@ public class DonutOrders extends JavaPlugin {
         allowedItemsManager = new AllowedItemsManager(this);
         allowedItemsManager.reload();
 
-        chatInputHandler = new ChatInputHandler();
-        orderManager     = new OrderManager(storageManager, economy);
-        guiManager       = new GUIManager(storageManager, orderManager, chatInputHandler);
+        chatInputHandler  = new ChatInputHandler();
+        orderLimitManager = new OrderLimitManager();
+        orderManager      = new OrderManager(storageManager, economy);
+        guiManager        = new GUIManager(storageManager, orderManager, chatInputHandler);
 
         // Register commands
         var ordersCmd = getCommand("orders");
@@ -127,7 +135,21 @@ public class DonutOrders extends JavaPlugin {
         var pm = getServer().getPluginManager();
         pm.registerEvents(new InventoryListener(guiManager), this);
         pm.registerEvents(new ChatListener(chatInputHandler), this);
-        pm.registerEvents(new PlayerQuitListener(guiManager, chatInputHandler), this);
+        pm.registerEvents(new PlayerJoinListener(orderLimitManager), this);
+        pm.registerEvents(new PlayerQuitListener(guiManager, chatInputHandler, orderLimitManager), this);
+
+        if (pm.getPlugin("LuckPerms") != null) {
+            LuckPerms luckPerms = Bukkit.getServicesManager().load(LuckPerms.class);
+            if (luckPerms != null) {
+                new LuckPermsLimitListener(orderLimitManager).register(luckPerms);
+                getLogger().info("[DonutOrders] LuckPerms detected — rank-based order limits enabled.");
+            }
+        }
+
+        if (pm.getPlugin("PlaceholderAPI") != null) {
+            new DonutOrdersExpansion(this, orderLimitManager).register();
+            getLogger().info("[DonutOrders] PlaceholderAPI detected — %donutorders_order_limit% registered.");
+        }
 
         // Expiry check: every 60 seconds (20 ticks * 60)
         FoliaScheduler.runGlobalRepeating(
@@ -178,6 +200,9 @@ public class DonutOrders extends JavaPlugin {
         reloadMessages();
         if (allowedItemsManager != null) {
             allowedItemsManager.reload();
+        }
+        if (orderLimitManager != null) {
+            orderLimitManager.refreshAllOnline();
         }
     }
 
@@ -244,6 +269,11 @@ public class DonutOrders extends JavaPlugin {
     /** Returns the allowed-items configuration manager. */
     public AllowedItemsManager getAllowedItemsManager() {
         return allowedItemsManager;
+    }
+
+    /** Returns the per-player order limit resolver. */
+    public OrderLimitManager getOrderLimitManager() {
+        return orderLimitManager;
     }
 
     /**

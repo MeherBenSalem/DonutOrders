@@ -75,7 +75,7 @@ public class OrderDetailGUI extends BaseGUI {
         return ItemUtils.createGuiItem(
             order.getItemTemplate().getType(),
             MessageHelper.getNamed("gui.order-detail.summary.name", "&f&l{item}",
-                "item", ItemUtils.prettyName(order.getItemTemplate().getType())),
+                "item", ItemUtils.describeOrderItem(order.getItemTemplate())),
             MessageHelper.getList("gui.order-detail.summary.lore",
                 "status_color", statusColor,
                 "status", statusName,

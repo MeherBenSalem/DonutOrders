@@ -11,6 +11,8 @@ folia-supported: true
 
 softdepend:
   - Vault
+  - LuckPerms
+  - PlaceholderAPI
 
 commands:
   orders:

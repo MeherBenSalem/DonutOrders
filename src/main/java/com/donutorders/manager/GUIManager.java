@@ -7,6 +7,7 @@ import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -58,12 +59,18 @@ public class GUIManager {
         public ItemStack selectedItem;
         /** Pending amount entered by chat; set before price prompt. */
         public Integer pendingAmount;
+        /** Enchant picker page to return to from the level picker. */
+        public int enchantPickerPage;
+        /** Active material search filter in NewOrderGUI; null = no filter. */
+        public String materialSearchQuery;
     }
 
     public enum GUIType {
         PUBLIC_ORDERS,
         YOUR_ORDERS,
         NEW_ORDER,
+        ENCHANT_PICKER,
+        ENCHANT_LEVEL,
         DELIVER_ITEMS,
         CONFIRM_DELIVERY,
         COLLECT_STASH,
@@ -102,18 +109,78 @@ public class GUIManager {
         }, null);
     }
 
-    /** Opens the item picker for creating a new order (first page). */
+    /** Opens the item picker for creating a new order (first page, clears any search). */
     public void openNewOrderPicker(Player player) {
-        openNewOrderPicker(player, 0);
+        openNewOrderPicker(player, 0, true);
     }
 
     /** Opens the item picker for creating a new order on the given page. */
     public void openNewOrderPicker(Player player, int page) {
+        openNewOrderPicker(player, page, false);
+    }
+
+    /**
+     * Opens the item picker for creating a new order.
+     *
+     * @param clearSearch when {@code true}, clears any active material search
+     *                    (used when opening fresh from Your Orders)
+     */
+    private void openNewOrderPicker(Player player, int page, boolean clearSearch) {
         FoliaScheduler.runAtEntity(player, () -> {
-            NewOrderGUI gui = new NewOrderGUI(this, Math.max(0, page));
+            PlayerGUIState existing = states.get(player.getUniqueId());
+            String searchQuery = clearSearch ? null
+                    : (existing != null ? existing.materialSearchQuery : null);
+
+            NewOrderGUI gui = new NewOrderGUI(this, Math.max(0, page), searchQuery);
 
             PlayerGUIState state = new PlayerGUIState();
             state.type = GUIType.NEW_ORDER;
+            state.gui  = gui;
+            state.materialSearchQuery = searchQuery;
+            player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
+        }, null);
+    }
+
+    /** Reopens the item picker with an updated search filter (page 0). */
+    public void openNewOrderPickerWithSearch(Player player, String searchQuery) {
+        FoliaScheduler.runAtEntity(player, () -> {
+            String query = (searchQuery == null || searchQuery.isBlank()) ? null : searchQuery.trim();
+
+            NewOrderGUI gui = new NewOrderGUI(this, 0, query);
+
+            PlayerGUIState state = new PlayerGUIState();
+            state.type = GUIType.NEW_ORDER;
+            state.gui  = gui;
+            state.materialSearchQuery = query;
+            player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
+        }, null);
+    }
+
+    /** Opens the enchant picker for enchanted-book orders. */
+    public void openEnchantPicker(Player player, int page) {
+        FoliaScheduler.runAtEntity(player, () -> {
+            EnchantPickerGUI gui = new EnchantPickerGUI(this, Math.max(0, page));
+
+            PlayerGUIState state = new PlayerGUIState();
+            state.type = GUIType.ENCHANT_PICKER;
+            state.gui  = gui;
+            player.openInventory(gui.getInventory());
+            states.put(player.getUniqueId(), state);
+        }, null);
+    }
+
+    /** Opens the level picker for a selected enchantment. */
+    public void openEnchantLevel(Player player, Enchantment enchantment) {
+        FoliaScheduler.runAtEntity(player, () -> {
+            EnchantLevelGUI gui = new EnchantLevelGUI(this, enchantment);
+
+            PlayerGUIState state = states.get(player.getUniqueId());
+            if (state == null) {
+                state = new PlayerGUIState();
+            }
+            state.type = GUIType.ENCHANT_LEVEL;
             state.gui  = gui;
             player.openInventory(gui.getInventory());
             states.put(player.getUniqueId(), state);

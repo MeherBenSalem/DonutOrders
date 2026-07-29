@@ -51,7 +51,7 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     }
 
     private void build() {
-        String itemName = ItemUtils.prettyName(order.getItemTemplate().getType());
+        String itemName = ItemUtils.describeOrderItem(order.getItemTemplate());
 
         inventory.setItem(SLOT_SUMMARY, ItemUtils.createGuiItem(
             order.getItemTemplate().getType(),
@@ -87,7 +87,7 @@ public class ConfirmDeliveryGUI extends BaseGUI {
                         MessageHelper.sendPrefixed(player, "delivery-success",
                             "&aᴅᴇʟɪᴠᴇʀᴇᴅ &f{0}× {1}&a. ʏᴏᴜ ᴇᴀʀɴᴇᴅ &f{2}&a.",
                             NumberFormatter.format(deliverCount),
-                            ItemUtils.prettyName(order.getItemTemplate().getType()),
+                            ItemUtils.describeOrderItem(order.getItemTemplate()),
                             NumberFormatter.formatPrice(payout));
                     } else {
                         player.sendMessage(errorMsg != null ? errorMsg

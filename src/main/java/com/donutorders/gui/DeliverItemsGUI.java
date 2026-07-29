@@ -48,7 +48,7 @@ public class DeliverItemsGUI extends BaseGUI {
     }
 
     private void build() {
-        String itemName = ItemUtils.prettyName(order.getItemTemplate().getType());
+        String itemName = ItemUtils.describeOrderItem(order.getItemTemplate());
 
         inventory.setItem(SLOT_ORDER_INFO, ItemUtils.createGuiItem(
             order.getItemTemplate().getType(),

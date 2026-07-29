@@ -96,7 +96,7 @@ public class YourOrdersGUI extends BaseGUI {
             MessageHelper.getNamed("gui.your-orders.order-item.name",
                 "{status_color}{item}",
                 "status_color", statusColor,
-                "item", ItemUtils.prettyName(mat)),
+                "item", ItemUtils.describeOrderItem(order.getItemTemplate())),
             MessageHelper.getList("gui.your-orders.order-item.lore",
                 "status_color", statusColor,
                 "status", statusName,

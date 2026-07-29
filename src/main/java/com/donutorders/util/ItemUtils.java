@@ -235,4 +235,12 @@ public final class ItemUtils {
         }
         return sb.toString();
     }
+
+    /**
+     * Returns a human-readable name for an order item template, including
+     * enchanted-book enchants when present.
+     */
+    public static String describeOrderItem(ItemStack item) {
+        return EnchantOrderUtils.describeOrderItem(item);
+    }
 }

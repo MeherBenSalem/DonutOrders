@@ -82,9 +82,9 @@ public class PublicOrdersGUI extends BaseGUI {
     }
 
     private ItemStack buildOrderItem(Order order) {
-        Material mat = order.getItemTemplate().getType();
-        String itemName = ItemUtils.prettyName(mat);
-        return ItemUtils.createGuiItem(mat,
+        ItemStack template = order.getItemTemplate();
+        String itemName = ItemUtils.describeOrderItem(template);
+        return ItemUtils.createGuiItem(template.getType(),
             MessageHelper.getNamed("gui.public-orders.order-item.name", "&f{item}",
                 "item", itemName),
             MessageHelper.getList("gui.public-orders.order-item.lore",

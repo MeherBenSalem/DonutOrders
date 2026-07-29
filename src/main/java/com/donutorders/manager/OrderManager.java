@@ -80,8 +80,7 @@ public class OrderManager {
                             BiConsumer<Boolean, String> callback) {
 
         // Validation is cheap — can run on any thread
-        int maxOrders = DonutOrders.getInstance().getConfig()
-                .getInt("orders.max-per-player", 10);
+        int maxOrders = DonutOrders.getInstance().getOrderLimitManager().getLimitValue(buyer);
         List<Order> existing = storage.getPlayerOrders(buyer.getUniqueId());
         long activeCount = existing.stream()
                 .filter(o -> o.getStatus() == OrderStatus.ACTIVE).count();

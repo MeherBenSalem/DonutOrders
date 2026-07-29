@@ -112,7 +112,7 @@ public class InventoryListener implements Listener {
                             event.setCancelled(true);
                             MessageHelper.send(player, "delivery-wrong-item",
                                 "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
-                                ItemUtils.prettyName(template.getType()));
+                                ItemUtils.describeOrderItem(template));
                         }
                     }
                 } else if (action == InventoryAction.COLLECT_TO_CURSOR) {
@@ -172,7 +172,7 @@ public class InventoryListener implements Listener {
                         event.setCancelled(true);
                         MessageHelper.send(player, "delivery-wrong-item",
                             "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
-                            ItemUtils.prettyName(template.getType()));
+                            ItemUtils.describeOrderItem(template));
                     }
                 }
                 return;
@@ -189,7 +189,7 @@ public class InventoryListener implements Listener {
                         event.setCancelled(true);
                         MessageHelper.send(player, "delivery-wrong-item",
                             "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
-                            ItemUtils.prettyName(template.getType()));
+                            ItemUtils.describeOrderItem(template));
                     }
                 } else {
                     event.setCancelled(false);
@@ -207,7 +207,7 @@ public class InventoryListener implements Listener {
                         event.setCancelled(true);
                         MessageHelper.send(player, "delivery-wrong-item",
                             "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c.",
-                            ItemUtils.prettyName(template.getType()));
+                            ItemUtils.describeOrderItem(template));
                     }
                 } else {
                     event.setCancelled(false);
