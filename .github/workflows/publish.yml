@@ -143,9 +143,18 @@ jobs:
                 return [...s];
               })();
 
-          // Prefer a single primary jar (skip original-*)
-          const primaryJars = jars.filter(j => !path.basename(j).startsWith('original-'));
+          // Prefer jar matching VERSION; skip original-* and older versioned jars
+          const primaryJars = jars
+            .filter(j => !path.basename(j).startsWith('original-'))
+            .sort((a, b) => {
+              const an = path.basename(a);
+              const bn = path.basename(b);
+              const aMatch = an.includes(version) ? 0 : 1;
+              const bMatch = bn.includes(version) ? 0 : 1;
+              return aMatch - bMatch || an.localeCompare(bn);
+            });
           const uploadJars = primaryJars.length ? [primaryJars[0]] : [jars[0]];
+          console.log('Uploading jars:', uploadJars);
 
           (async () => {
             const changelog = fs.existsSync(`DonutOrders-${version}-PatchNotes.md`)
@@ -180,14 +189,14 @@ jobs:
             if (!mrRes.ok) throw new Error('Modrinth ' + mrRes.status + ' ' + mrText.slice(0, 500));
             console.log('Modrinth OK', mrText.slice(0, 180));
 
-            const gvRes = await fetch('https://api.curseforge.com/v1/games/432/versions', {
-              headers: { 'x-api-key': process.env.CURSEFORGE_API_KEY },
+            // CurseForge: use legacy game/versions list + Bukkit type IDs + releaseType string
+            const gvRes = await fetch('https://minecraft.curseforge.com/api/game/versions', {
+              headers: { 'X-Api-Token': process.env.CURSEFORGE_TOKEN },
             });
-            const gvJson = await gvRes.json();
-            const flat = [];
-            for (const g of gvJson.data || []) for (const v of g.versions || []) flat.push(v);
+            const flat = await gvRes.json();
             const gameVersionIds = gvs.map((want) => {
-              const hit = flat.find((v) => v.name === want);
+              const hit = flat.find((v) => v.name === want && v.gameVersionTypeID === 1)
+                || flat.find((v) => v.name === want);
               if (!hit) throw new Error('No CF game version for ' + want);
               return hit.id;
             });
@@ -198,7 +207,7 @@ jobs:
                 changelogType: 'markdown',
                 displayName: path.basename(jar),
                 gameVersions: gameVersionIds,
-                releaseType: 1,
+                releaseType: 'release',
               };
               const cfForm = new FormData();
               cfForm.append('metadata', JSON.stringify(meta));
