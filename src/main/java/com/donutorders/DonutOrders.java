@@ -104,7 +104,17 @@ public class DonutOrders extends JavaPlugin {
         registerStartupOrdersCommand();
 
         // Load all persisted orders async, then complete enable on global thread
-        storageManager.loadAll(this::completeEnable);
+        storageManager.loadAll(this::finishEnable);
+    }
+
+    private void finishEnable() {
+        try {
+            completeEnable();
+        } catch (Throwable t) {
+            getLogger().log(Level.SEVERE,
+                    "[DonutOrders] Failed to finish startup after loading orders.", t);
+            getServer().getPluginManager().disablePlugin(this);
+        }
     }
 
     /**
@@ -274,6 +284,11 @@ public class DonutOrders extends JavaPlugin {
     /** Returns the per-player order limit resolver. */
     public OrderLimitManager getOrderLimitManager() {
         return orderLimitManager;
+    }
+
+    /** True once async startup has finished and managers are registered. */
+    public boolean isPluginReady() {
+        return pluginReady;
     }
 
     /**

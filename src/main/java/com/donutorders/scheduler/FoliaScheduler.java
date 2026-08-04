@@ -6,6 +6,9 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * Folia-first scheduler abstraction.
  *
@@ -33,17 +36,38 @@ public final class FoliaScheduler {
     public static final boolean IS_FOLIA;
 
     static {
-        boolean folia;
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-            folia = true;
-        } catch (ClassNotFoundException e) {
-            folia = false;
-        }
-        IS_FOLIA = folia;
+        IS_FOLIA = detectFolia();
     }
 
     private FoliaScheduler() {}
+
+    private static boolean detectFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (ClassNotFoundException ignored) {
+            // Some forks expose regional schedulers without that exact class name.
+            String serverClass = Bukkit.getServer().getClass().getName().toLowerCase();
+            return serverClass.contains("folia") || serverClass.contains("regionized");
+        }
+    }
+
+    private static Plugin plugin() {
+        return DonutOrders.getInstance();
+    }
+
+    private static Logger log() {
+        DonutOrders instance = DonutOrders.getInstance();
+        return instance != null ? instance.getLogger() : Logger.getLogger("DonutOrders");
+    }
+
+    private static void safeRun(Runnable task) {
+        try {
+            task.run();
+        } catch (Throwable t) {
+            log().log(Level.SEVERE, "Scheduled task failed", t);
+        }
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     //  Entity-bound scheduling
@@ -58,14 +82,21 @@ public final class FoliaScheduler {
      *                keep this short — no I/O, no chunk loads
      */
     public static void runAtEntity(Entity entity, Runnable task, Runnable retired) {
-        Plugin plugin = DonutOrders.getInstance();
+        Plugin plugin = plugin();
         if (IS_FOLIA) {
-            // EntityScheduler.run returns null if the entity is not reachable;
-            // in that case neither task nor retired will fire — acceptable.
-            entity.getScheduler().run(plugin, t -> task.run(), retired);
-        } else {
-            Bukkit.getScheduler().runTask(plugin, task);
+            entity.getScheduler().run(plugin, t -> safeRun(task), retired);
+            return;
         }
+        try {
+            Bukkit.getScheduler().runTask(plugin, task);
+        } catch (UnsupportedOperationException ex) {
+            entity.getScheduler().run(plugin, t -> safeRun(task), retired);
+        }
+    }
+
+    /** Convenience overload without a retired callback. */
+    public static void runAtEntity(Entity entity, Runnable task) {
+        runAtEntity(entity, task, () -> {});
     }
 
     /**
@@ -78,11 +109,15 @@ public final class FoliaScheduler {
      */
     public static void runAtEntityDelayed(Entity entity, Runnable task,
                                           Runnable retired, long delayTicks) {
-        Plugin plugin = DonutOrders.getInstance();
+        Plugin plugin = plugin();
         if (IS_FOLIA) {
-            entity.getScheduler().runDelayed(plugin, t -> task.run(), retired, delayTicks);
-        } else {
+            entity.getScheduler().runDelayed(plugin, t -> safeRun(task), retired, delayTicks);
+            return;
+        }
+        try {
             Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
+        } catch (UnsupportedOperationException ex) {
+            entity.getScheduler().runDelayed(plugin, t -> safeRun(task), retired, delayTicks);
         }
     }
 
@@ -94,11 +129,15 @@ public final class FoliaScheduler {
      * Run {@code task} on the thread owning the chunk at {@code location}.
      */
     public static void runAtLocation(Location location, Runnable task) {
-        Plugin plugin = DonutOrders.getInstance();
+        Plugin plugin = plugin();
         if (IS_FOLIA) {
-            Bukkit.getRegionScheduler().run(plugin, location, t -> task.run());
-        } else {
+            Bukkit.getRegionScheduler().run(plugin, location, t -> safeRun(task));
+            return;
+        }
+        try {
             Bukkit.getScheduler().runTask(plugin, task);
+        } catch (UnsupportedOperationException ex) {
+            Bukkit.getRegionScheduler().run(plugin, location, t -> safeRun(task));
         }
     }
 
@@ -111,11 +150,15 @@ public final class FoliaScheduler {
      * On Paper this is the main thread.
      */
     public static void runGlobal(Runnable task) {
-        Plugin plugin = DonutOrders.getInstance();
+        Plugin plugin = plugin();
         if (IS_FOLIA) {
-            Bukkit.getGlobalRegionScheduler().run(plugin, t -> task.run());
-        } else {
+            Bukkit.getGlobalRegionScheduler().run(plugin, t -> safeRun(task));
+            return;
+        }
+        try {
             Bukkit.getScheduler().runTask(plugin, task);
+        } catch (UnsupportedOperationException ex) {
+            Bukkit.getGlobalRegionScheduler().run(plugin, t -> safeRun(task));
         }
     }
 
@@ -123,11 +166,15 @@ public final class FoliaScheduler {
      * Run {@code task} on the global region thread after {@code delayTicks}.
      */
     public static void runGlobalDelayed(Runnable task, long delayTicks) {
-        Plugin plugin = DonutOrders.getInstance();
+        Plugin plugin = plugin();
         if (IS_FOLIA) {
-            Bukkit.getGlobalRegionScheduler().runDelayed(plugin, t -> task.run(), delayTicks);
-        } else {
+            Bukkit.getGlobalRegionScheduler().runDelayed(plugin, t -> safeRun(task), delayTicks);
+            return;
+        }
+        try {
             Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
+        } catch (UnsupportedOperationException ex) {
+            Bukkit.getGlobalRegionScheduler().runDelayed(plugin, t -> safeRun(task), delayTicks);
         }
     }
 
@@ -139,12 +186,17 @@ public final class FoliaScheduler {
      * @param periodTicks  period between executions (ticks)
      */
     public static void runGlobalRepeating(Runnable task, long initialTicks, long periodTicks) {
-        Plugin plugin = DonutOrders.getInstance();
+        Plugin plugin = plugin();
         if (IS_FOLIA) {
             Bukkit.getGlobalRegionScheduler().runAtFixedRate(
-                    plugin, t -> task.run(), initialTicks, periodTicks);
-        } else {
+                    plugin, t -> safeRun(task), initialTicks, periodTicks);
+            return;
+        }
+        try {
             Bukkit.getScheduler().runTaskTimer(plugin, task, initialTicks, periodTicks);
+        } catch (UnsupportedOperationException ex) {
+            Bukkit.getGlobalRegionScheduler().runAtFixedRate(
+                    plugin, t -> safeRun(task), initialTicks, periodTicks);
         }
     }
 
@@ -158,11 +210,16 @@ public final class FoliaScheduler {
      * bounce back to the correct thread via {@link #runAtEntity} etc.
      */
     public static void runAsync(Runnable task) {
-        Plugin plugin = DonutOrders.getInstance();
+        Plugin plugin = plugin();
         if (IS_FOLIA) {
-            Bukkit.getAsyncScheduler().runNow(plugin, t -> task.run());
-        } else {
+            Bukkit.getAsyncScheduler().runNow(plugin, t -> safeRun(task));
+            return;
+        }
+        try {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+        } catch (UnsupportedOperationException ex) {
+            // Regionalised server missed by static detection — never use CraftScheduler async.
+            Bukkit.getAsyncScheduler().runNow(plugin, t -> safeRun(task));
         }
     }
 }

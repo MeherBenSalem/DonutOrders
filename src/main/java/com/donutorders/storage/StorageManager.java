@@ -147,24 +147,42 @@ public class StorageManager {
      * after loading is complete.
      */
     public void loadAll(Runnable onDone) {
-        FoliaScheduler.runAsync(() -> {
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement("SELECT * FROM orders")) {
-
-                ResultSet rs = ps.executeQuery();
-                while (rs.next()) {
-                    Order order = rowToOrder(rs);
-                    if (order != null) {
-                        putToCache(order);
-                    }
-                }
-            } catch (SQLException e) {
-                LOG.log(Level.SEVERE, "Failed to load orders from database", e);
+        Runnable finish = () -> {
+            try {
+                onDone.run();
+            } catch (Throwable t) {
+                LOG.log(Level.SEVERE, "Order load completion callback failed", t);
             }
-            // Bounce back to global thread so the caller can safely enable
-            // the rest of the plugin.
-            FoliaScheduler.runGlobal(onDone);
-        });
+        };
+
+        try {
+            FoliaScheduler.runAsync(() -> {
+                loadAllIntoCache();
+                FoliaScheduler.runGlobal(finish);
+            });
+        } catch (RuntimeException ex) {
+            LOG.log(Level.WARNING,
+                    "Async scheduler unavailable during startup; loading orders synchronously", ex);
+            loadAllIntoCache();
+            FoliaScheduler.runGlobal(finish);
+        }
+    }
+
+    /** Reads every order row from SQLite into the in-memory cache. */
+    private void loadAllIntoCache() {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT * FROM orders")) {
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Order order = rowToOrder(rs);
+                if (order != null) {
+                    putToCache(order);
+                }
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "Failed to load orders from database", e);
+        }
     }
 
     // ── CRUD ──────────────────────────────────────────────────────────────────
