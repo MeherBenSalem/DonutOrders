@@ -7,7 +7,7 @@
 
     <groupId>com.donutorders</groupId>
     <artifactId>DonutOrders</artifactId>
-    <version>1.5.1</version>
+    <version>1.6.0</version>
     <packaging>jar</packaging>
 
     <name>DonutOrders</name>
@@ -79,6 +79,14 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>5.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- MySQL JDBC — shaded for cross-server shared database -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.3.0</version>
             <scope>compile</scope>
         </dependency>
 
@@ -208,6 +216,10 @@
                                     without relocation.
                                 -->
                                 <!-- Relocate SLF4J to isolate logging from other plugins -->
+                                <relocation>
+                                    <pattern>com.mysql</pattern>
+                                    <shadedPattern>com.donutorders.libs.mysql</shadedPattern>
+                                </relocation>
                                 <relocation>
                                     <pattern>org.slf4j</pattern>
                                     <shadedPattern>com.donutorders.libs.slf4j</shadedPattern>

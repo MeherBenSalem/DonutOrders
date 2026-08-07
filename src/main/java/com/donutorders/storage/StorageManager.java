@@ -8,12 +8,14 @@ import com.donutorders.util.ItemUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,80 +25,72 @@ import java.util.logging.Logger;
  *
  * <h2>Design</h2>
  * <ul>
- *   <li>SQLite database with WAL mode — single connection pool (size = 1) as
- *       required for SQLite's WAL concurrency model.</li>
+ *   <li>SQLite (default) or MySQL via HikariCP connection pool.</li>
  *   <li>In-memory cache ({@link ConcurrentHashMap}) is the primary read path;
  *       cache reads are always synchronous and safe for Folia region threads.</li>
  *   <li>All database <em>writes</em> are dispatched via {@link FoliaScheduler#runAsync}
  *       so they never block any region thread.</li>
- *   <li>All callbacks that touch Bukkit API must be re-scheduled onto the correct
- *       thread by the caller (OrderManager does this via runAtEntity).</li>
+ *   <li>MySQL mode polls {@code updated_at} changes on a global repeating task so
+ *       multiple servers sharing one database stay in sync.</li>
  * </ul>
- *
- * <h2>Schema</h2>
- * <pre>
- * orders(
- *   order_id       TEXT PRIMARY KEY,
- *   buyer_uuid     TEXT NOT NULL,
- *   buyer_name     TEXT NOT NULL,
- *   item_data      TEXT NOT NULL,   -- Base64-serialised ItemStack
- *   amount_req     INTEGER NOT NULL,
- *   amount_filled  INTEGER NOT NULL,
- *   price_per_item REAL NOT NULL,
- *   remaining_funds REAL NOT NULL,
- *   created_at     INTEGER NOT NULL,
- *   expires_at     INTEGER NOT NULL,
- *   status         TEXT NOT NULL
- * )
- *
- * order_stash(
- *   order_id   TEXT NOT NULL REFERENCES orders(order_id),
- *   stash_data TEXT NOT NULL,       -- Base64-serialised ItemStack[]
- *   PRIMARY KEY (order_id)
- * )
- * </pre>
  */
 public class StorageManager {
 
     private static final Logger LOG = DonutOrders.getInstance().getLogger();
 
     private final HikariDataSource dataSource;
+    private final boolean mysql;
+    private final int syncIntervalSeconds;
+
+    /** Tracks the highest {@code updated_at} seen for cross-server polling. */
+    private final AtomicLong lastSyncedAt = new AtomicLong(0L);
 
     // ── In-memory cache ───────────────────────────────────────────────────────
 
-    /** Primary cache: orderId → Order. Thread-safe for concurrent reads. */
     private final ConcurrentHashMap<UUID, Order> orderCache = new ConcurrentHashMap<>();
-
-    /**
-     * Secondary index: buyerUUID → list of orderIds.
-     * The inner List is wrapped in a copy-on-write pattern (reassigned atomically).
-     */
     private final ConcurrentHashMap<UUID, List<UUID>> playerOrderIndex = new ConcurrentHashMap<>();
 
     // ── Constructor / startup ─────────────────────────────────────────────────
 
     public StorageManager(File dataFolder) throws SQLException {
-        File dbFile = new File(dataFolder, DonutOrders.getInstance()
-                .getConfig().getString("database.filename", "donutorders.db"));
+        FileConfiguration config = DonutOrders.getInstance().getConfig();
+        String dbType = config.getString("database.type", "sqlite");
+        this.mysql = "mysql".equalsIgnoreCase(dbType);
+        this.syncIntervalSeconds = config.getInt("database.sync-interval-seconds", 5);
 
         HikariConfig cfg = new HikariConfig();
-        cfg.setDriverClassName("org.sqlite.JDBC");
-        cfg.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        if (mysql) {
+            String host = config.getString("database.mysql.host", "localhost");
+            int port = config.getInt("database.mysql.port", 3306);
+            String database = config.getString("database.mysql.database", "donutorders");
+            String username = config.getString("database.mysql.username", "donutorders");
+            String password = config.getString("database.mysql.password", "");
+            int poolSize = config.getInt("database.mysql.pool-size", 10);
 
-        // SQLite must use pool size of exactly 1 to avoid write-lock contention.
-        cfg.setMaximumPoolSize(1);
-        cfg.setMinimumIdle(1);
-        cfg.setConnectionTimeout(30_000);
-        cfg.setIdleTimeout(0);        // never evict the single connection
-        cfg.setMaxLifetime(0);        // never recycle it
-        cfg.setPoolName("DonutOrders-SQLite");
-
-        // Enable WAL mode + set a busy timeout so concurrent readers don't
-        // immediately fail when the writer holds the lock.
-        cfg.setConnectionInitSql(
-                "PRAGMA journal_mode=WAL; " +
-                "PRAGMA busy_timeout=30000; " +
-                "PRAGMA synchronous=NORMAL;");
+            cfg.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            cfg.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database
+                    + "?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8");
+            cfg.setUsername(username);
+            cfg.setPassword(password);
+            cfg.setMaximumPoolSize(Math.max(1, poolSize));
+            cfg.setMinimumIdle(Math.min(2, poolSize));
+            cfg.setConnectionTimeout(30_000);
+            cfg.setPoolName("DonutOrders-MySQL");
+        } else {
+            File dbFile = new File(dataFolder, config.getString("database.filename", "donutorders.db"));
+            cfg.setDriverClassName("org.sqlite.JDBC");
+            cfg.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+            cfg.setMaximumPoolSize(1);
+            cfg.setMinimumIdle(1);
+            cfg.setConnectionTimeout(30_000);
+            cfg.setIdleTimeout(0);
+            cfg.setMaxLifetime(0);
+            cfg.setPoolName("DonutOrders-SQLite");
+            cfg.setConnectionInitSql(
+                    "PRAGMA journal_mode=WAL; " +
+                    "PRAGMA busy_timeout=30000; " +
+                    "PRAGMA synchronous=NORMAL;");
+        }
 
         this.dataSource = new HikariDataSource(cfg);
         createTables();
@@ -107,45 +101,152 @@ public class StorageManager {
     private void createTables() throws SQLException {
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate(
-                "CREATE TABLE IF NOT EXISTS orders (" +
-                "  order_id        TEXT PRIMARY KEY," +
-                "  buyer_uuid      TEXT NOT NULL," +
-                "  buyer_name      TEXT NOT NULL," +
-                "  item_data       TEXT NOT NULL," +
-                "  amount_req      INTEGER NOT NULL," +
-                "  amount_filled   INTEGER NOT NULL," +
-                "  price_per_item  REAL NOT NULL," +
-                "  remaining_funds REAL NOT NULL," +
-                "  created_at      INTEGER NOT NULL," +
-                "  expires_at      INTEGER NOT NULL," +
-                "  status          TEXT NOT NULL," +
-                "  claimed_at      INTEGER DEFAULT 0," +
-                "  claimed_by      TEXT DEFAULT NULL" +
-                ")");
-            stmt.executeUpdate(
-                "CREATE TABLE IF NOT EXISTS order_stash (" +
-                "  order_id   TEXT PRIMARY KEY," +
-                "  stash_data TEXT NOT NULL" +
-                ")");
 
-            // Execute schema upgrades for existing installations
+            if (mysql) {
+                stmt.executeUpdate(
+                    "CREATE TABLE IF NOT EXISTS orders (" +
+                    "  order_id        VARCHAR(36) PRIMARY KEY," +
+                    "  buyer_uuid      VARCHAR(36) NOT NULL," +
+                    "  buyer_name      VARCHAR(64) NOT NULL," +
+                    "  item_data       TEXT NOT NULL," +
+                    "  amount_req      INT NOT NULL," +
+                    "  amount_filled   INT NOT NULL," +
+                    "  price_per_item  DOUBLE NOT NULL," +
+                    "  remaining_funds DOUBLE NOT NULL," +
+                    "  created_at      BIGINT NOT NULL," +
+                    "  expires_at      BIGINT NOT NULL," +
+                    "  status          VARCHAR(16) NOT NULL," +
+                    "  claimed_at      BIGINT DEFAULT 0," +
+                    "  claimed_by      VARCHAR(36) DEFAULT NULL," +
+                    "  updated_at      BIGINT NOT NULL DEFAULT 0" +
+                    ")");
+                stmt.executeUpdate(
+                    "CREATE TABLE IF NOT EXISTS order_stash (" +
+                    "  order_id   VARCHAR(36) PRIMARY KEY," +
+                    "  stash_data TEXT NOT NULL" +
+                    ")");
+            } else {
+                stmt.executeUpdate(
+                    "CREATE TABLE IF NOT EXISTS orders (" +
+                    "  order_id        TEXT PRIMARY KEY," +
+                    "  buyer_uuid      TEXT NOT NULL," +
+                    "  buyer_name      TEXT NOT NULL," +
+                    "  item_data       TEXT NOT NULL," +
+                    "  amount_req      INTEGER NOT NULL," +
+                    "  amount_filled   INTEGER NOT NULL," +
+                    "  price_per_item  REAL NOT NULL," +
+                    "  remaining_funds REAL NOT NULL," +
+                    "  created_at      INTEGER NOT NULL," +
+                    "  expires_at      INTEGER NOT NULL," +
+                    "  status          TEXT NOT NULL," +
+                    "  claimed_at      INTEGER DEFAULT 0," +
+                    "  claimed_by      TEXT DEFAULT NULL," +
+                    "  updated_at      INTEGER NOT NULL DEFAULT 0" +
+                    ")");
+                stmt.executeUpdate(
+                    "CREATE TABLE IF NOT EXISTS order_stash (" +
+                    "  order_id   TEXT PRIMARY KEY," +
+                    "  stash_data TEXT NOT NULL" +
+                    ")");
+            }
+
             try {
-                stmt.executeUpdate("ALTER TABLE orders ADD COLUMN claimed_at INTEGER DEFAULT 0");
+                stmt.executeUpdate("ALTER TABLE orders ADD COLUMN claimed_at "
+                        + (mysql ? "BIGINT DEFAULT 0" : "INTEGER DEFAULT 0"));
             } catch (SQLException ignored) {}
             try {
-                stmt.executeUpdate("ALTER TABLE orders ADD COLUMN claimed_by TEXT DEFAULT NULL");
+                stmt.executeUpdate("ALTER TABLE orders ADD COLUMN claimed_by "
+                        + (mysql ? "VARCHAR(36) DEFAULT NULL" : "TEXT DEFAULT NULL"));
+            } catch (SQLException ignored) {}
+            try {
+                stmt.executeUpdate("ALTER TABLE orders ADD COLUMN updated_at "
+                        + (mysql ? "BIGINT NOT NULL DEFAULT 0" : "INTEGER NOT NULL DEFAULT 0"));
             } catch (SQLException ignored) {}
         }
     }
 
-    // ── Startup load ──────────────────────────────────────────────────────────
+    // ── Cross-server sync ─────────────────────────────────────────────────────
 
     /**
-     * Loads all orders from the database into the in-memory cache.
-     * Runs asynchronously; {@code onDone} is called on the global/main thread
-     * after loading is complete.
+     * Starts polling the shared database for order changes (MySQL cross-server).
+     * No-op when sync interval is zero or negative.
      */
+    public void startSyncTask() {
+        if (!mysql || syncIntervalSeconds <= 0) {
+            return;
+        }
+        long periodTicks = syncIntervalSeconds * 20L;
+        FoliaScheduler.runGlobalRepeating(this::pollRemoteChanges, periodTicks, periodTicks);
+        LOG.info("[DonutOrders] MySQL cross-server sync enabled (every "
+                + syncIntervalSeconds + "s).");
+    }
+
+    private void pollRemoteChanges() {
+        FoliaScheduler.runAsync(() -> {
+            long since = lastSyncedAt.get();
+            final String sql = "SELECT * FROM orders WHERE updated_at > ? ORDER BY updated_at ASC";
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, since);
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    Order order = rowToOrder(rs);
+                    if (order != null) {
+                        mergeRemoteOrder(order);
+                        lastSyncedAt.updateAndGet(prev -> Math.max(prev, order.getUpdatedAt()));
+                    }
+                }
+            } catch (SQLException e) {
+                LOG.log(Level.WARNING, "Failed to poll remote order changes", e);
+            }
+        });
+    }
+
+    /**
+     * Refreshes a single order from the database before a critical mutation.
+     * {@code callback} receives the cached order (possibly updated) on the async thread.
+     */
+    public void refreshOrderFromDb(UUID orderId, Consumer<Order> callback) {
+        FoliaScheduler.runAsync(() -> callback.accept(refreshOrderFromDbSync(orderId)));
+    }
+
+    /** Synchronous DB read — must only be called from async threads. */
+    public Order refreshOrderFromDbSync(UUID orderId) {
+        final String sql = "SELECT * FROM orders WHERE order_id=?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, orderId.toString());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                Order fromDb = rowToOrder(rs);
+                if (fromDb != null) {
+                    mergeRemoteOrder(fromDb);
+                    lastSyncedAt.updateAndGet(prev -> Math.max(prev, fromDb.getUpdatedAt()));
+                    return orderCache.get(orderId);
+                }
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, "Failed to refresh order " + orderId + " from database", e);
+        }
+        return orderCache.get(orderId);
+    }
+
+    private void mergeRemoteOrder(Order fromDb) {
+        orderCache.compute(fromDb.getOrderId(), (id, cached) -> {
+            if (cached == null) {
+                putToPlayerIndex(fromDb);
+                return fromDb;
+            }
+            if (fromDb.getUpdatedAt() >= cached.getUpdatedAt()) {
+                cached.applyRemoteState(fromDb);
+                return cached;
+            }
+            return cached;
+        });
+    }
+
+    // ── Startup load ──────────────────────────────────────────────────────────
+
     public void loadAll(Runnable onDone) {
         Runnable finish = () -> {
             try {
@@ -168,7 +269,6 @@ public class StorageManager {
         }
     }
 
-    /** Reads every order row from SQLite into the in-memory cache. */
     private void loadAllIntoCache() {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT * FROM orders")) {
@@ -178,6 +278,7 @@ public class StorageManager {
                 Order order = rowToOrder(rs);
                 if (order != null) {
                     putToCache(order);
+                    lastSyncedAt.updateAndGet(prev -> Math.max(prev, order.getUpdatedAt()));
                 }
             }
         } catch (SQLException e) {
@@ -187,21 +288,30 @@ public class StorageManager {
 
     // ── CRUD ──────────────────────────────────────────────────────────────────
 
-    /**
-     * Inserts a brand-new order. Updates cache immediately; persists async.
-     * {@code callback} is called on the async thread — callers must re-schedule
-     * to a game thread before touching Bukkit API.
-     */
     public void saveOrder(Order order, Runnable callback) {
-        // Update cache first so the order is instantly visible.
+        order.setUpdatedAt(System.currentTimeMillis());
         putToCache(order);
+        lastSyncedAt.updateAndGet(prev -> Math.max(prev, order.getUpdatedAt()));
 
         FoliaScheduler.runAsync(() -> {
-            final String sql =
-                "INSERT OR REPLACE INTO orders " +
-                "(order_id, buyer_uuid, buyer_name, item_data, amount_req, " +
-                " amount_filled, price_per_item, remaining_funds, created_at, " +
-                " expires_at, status, claimed_at, claimed_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            final String sql = mysql
+                ? "INSERT INTO orders " +
+                  "(order_id, buyer_uuid, buyer_name, item_data, amount_req, " +
+                  " amount_filled, price_per_item, remaining_funds, created_at, " +
+                  " expires_at, status, claimed_at, claimed_by, updated_at) " +
+                  "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) " +
+                  "ON DUPLICATE KEY UPDATE " +
+                  "buyer_uuid=VALUES(buyer_uuid), buyer_name=VALUES(buyer_name), " +
+                  "item_data=VALUES(item_data), amount_req=VALUES(amount_req), " +
+                  "amount_filled=VALUES(amount_filled), price_per_item=VALUES(price_per_item), " +
+                  "remaining_funds=VALUES(remaining_funds), created_at=VALUES(created_at), " +
+                  "expires_at=VALUES(expires_at), status=VALUES(status), " +
+                  "claimed_at=VALUES(claimed_at), claimed_by=VALUES(claimed_by), " +
+                  "updated_at=VALUES(updated_at)"
+                : "INSERT OR REPLACE INTO orders " +
+                  "(order_id, buyer_uuid, buyer_name, item_data, amount_req, " +
+                  " amount_filled, price_per_item, remaining_funds, created_at, " +
+                  " expires_at, status, claimed_at, claimed_by, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 bindOrder(ps, order);
@@ -213,48 +323,76 @@ public class StorageManager {
         });
     }
 
-    /**
-     * Updates an existing order's mutable fields in the database.
-     * Cache is updated synchronously before the async write.
-     */
     public void updateOrder(Order order, Runnable callback) {
-        // Cache is already up-to-date (object mutation is in-place) but we
-        // still call putToCache to refresh the player index if status changed.
-        putToCache(order);
-
-        FoliaScheduler.runAsync(() -> {
-            final String sql =
-                "UPDATE orders SET " +
-                "  amount_filled=?, remaining_funds=?, status=?, claimed_at=?, claimed_by=? " +
-                "WHERE order_id=?";
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, order.getAmountFulfilled());
-                ps.setDouble(2, order.getRemainingFunds());
-                ps.setString(3, order.getStatus().name());
-                ps.setLong(4, order.getClaimedAt());
-                ps.setString(5, order.getClaimedBy() != null ? order.getClaimedBy().toString() : null);
-                ps.setString(6, order.getOrderId().toString());
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                LOG.log(Level.SEVERE, "Failed to update order " + order.getOrderId(), e);
+        updateOrderOptimistic(order, null, null, success -> {
+            if (callback != null) {
+                callback.run();
             }
-            if (callback != null) callback.run();
         });
     }
 
     /**
-     * Saves (upserts) a 54-slot stash for an order. Async.
+     * Updates an order with optional optimistic concurrency checks.
      *
-     * @param orderId  the order whose stash to save
-     * @param stash    54-element ItemStack array (nulls = empty slots)
-     * @param callback called on the async thread after write completes
+     * @param expectedAmountFilled when non-null, UPDATE only succeeds if amount_filled matches
+     * @param expectedStatus       when non-null, UPDATE only succeeds if status matches
+     * @param callback             receives {@code true} on success, {@code false} on conflict
      */
+    public void updateOrderOptimistic(Order order,
+                                      Integer expectedAmountFilled,
+                                      OrderStatus expectedStatus,
+                                      Consumer<Boolean> callback) {
+        order.setUpdatedAt(System.currentTimeMillis());
+        putToCache(order);
+        lastSyncedAt.updateAndGet(prev -> Math.max(prev, order.getUpdatedAt()));
+
+        FoliaScheduler.runAsync(() -> {
+            boolean success = false;
+            StringBuilder sql = new StringBuilder(
+                "UPDATE orders SET amount_filled=?, remaining_funds=?, status=?, " +
+                "claimed_at=?, claimed_by=?, updated_at=? WHERE order_id=?");
+            if (expectedAmountFilled != null) {
+                sql.append(" AND amount_filled=?");
+            }
+            if (expectedStatus != null) {
+                sql.append(" AND status=?");
+            }
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+                int idx = 1;
+                ps.setInt(idx++, order.getAmountFulfilled());
+                ps.setDouble(idx++, order.getRemainingFunds());
+                ps.setString(idx++, order.getStatus().name());
+                ps.setLong(idx++, order.getClaimedAt());
+                ps.setString(idx++, order.getClaimedBy() != null ? order.getClaimedBy().toString() : null);
+                ps.setLong(idx++, order.getUpdatedAt());
+                ps.setString(idx++, order.getOrderId().toString());
+                if (expectedAmountFilled != null) {
+                    ps.setInt(idx++, expectedAmountFilled);
+                }
+                if (expectedStatus != null) {
+                    ps.setString(idx++, expectedStatus.name());
+                }
+                success = ps.executeUpdate() > 0;
+            } catch (SQLException e) {
+                LOG.log(Level.SEVERE, "Failed to update order " + order.getOrderId(), e);
+            }
+
+            if (callback != null) {
+                boolean finalSuccess = success;
+                callback.accept(finalSuccess);
+            }
+        });
+    }
+
     public void saveStash(UUID orderId, ItemStack[] stash, Runnable callback) {
         String data = ItemUtils.serializeItemArray(stash);
         FoliaScheduler.runAsync(() -> {
-            final String sql =
-                "INSERT OR REPLACE INTO order_stash (order_id, stash_data) VALUES (?,?)";
+            final String sql = mysql
+                ? "INSERT INTO order_stash (order_id, stash_data) VALUES (?,?) " +
+                  "ON DUPLICATE KEY UPDATE stash_data=VALUES(stash_data)"
+                : "INSERT OR REPLACE INTO order_stash (order_id, stash_data) VALUES (?,?)";
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, orderId.toString());
@@ -267,11 +405,6 @@ public class StorageManager {
         });
     }
 
-    /**
-     * Loads the stash for an order asynchronously, then delivers the result
-     * to {@code callback} on the async thread. Callers must re-schedule to
-     * the correct game thread before opening inventories.
-     */
     public void loadStash(UUID orderId, Consumer<ItemStack[]> callback) {
         FoliaScheduler.runAsync(() -> {
             ItemStack[] result = new ItemStack[54];
@@ -290,10 +423,6 @@ public class StorageManager {
         });
     }
 
-    /**
-     * Clears the stash row for an order (called when items are fully collected
-     * or the order is cleaned up). Async.
-     */
     public void clearStash(UUID orderId, Runnable callback) {
         FoliaScheduler.runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
@@ -308,17 +437,12 @@ public class StorageManager {
         });
     }
 
-    // ── Cache accessors (synchronous — safe for region threads) ───────────────
+    // ── Cache accessors ───────────────────────────────────────────────────────
 
-    /** Returns the Order for the given id, or {@code null} if not found. */
     public Order getOrder(UUID orderId) {
         return orderCache.get(orderId);
     }
 
-    /**
-     * Returns an unmodifiable snapshot of all orders belonging to a player.
-     * The list may be empty but is never null.
-     */
     public List<Order> getPlayerOrders(UUID playerUUID) {
         List<UUID> ids = playerOrderIndex.getOrDefault(playerUUID, Collections.emptyList());
         List<Order> result = new ArrayList<>(ids.size());
@@ -329,10 +453,6 @@ public class StorageManager {
         return result;
     }
 
-    /**
-     * Returns an unmodifiable snapshot of all currently ACTIVE orders across
-     * all players, sorted by creation time (oldest first).
-     */
     public List<Order> getAllActiveOrders() {
         List<Order> active = new ArrayList<>();
         for (Order o : orderCache.values()) {
@@ -344,20 +464,16 @@ public class StorageManager {
         return active;
     }
 
-    /**
-     * Returns every order in the cache across all statuses.
-     * Used by the expiry checker.
-     */
     public Collection<Order> getAllOrders() {
         return Collections.unmodifiableCollection(orderCache.values());
     }
 
+    public boolean isMysql() {
+        return mysql;
+    }
+
     // ── Shutdown ──────────────────────────────────────────────────────────────
 
-    /**
-     * Gracefully shuts down the HikariCP connection pool.
-     * Call this from {@code onDisable}.
-     */
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
@@ -366,10 +482,12 @@ public class StorageManager {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    /** Adds / refreshes an order in both caches. */
     private void putToCache(Order order) {
         orderCache.put(order.getOrderId(), order);
+        putToPlayerIndex(order);
+    }
 
+    private void putToPlayerIndex(Order order) {
         playerOrderIndex.compute(order.getBuyerUUID(), (k, existing) -> {
             if (existing == null) {
                 List<UUID> list = new ArrayList<>();
@@ -385,7 +503,6 @@ public class StorageManager {
         });
     }
 
-    /** Binds all Order fields to a PreparedStatement for the INSERT statement. */
     private void bindOrder(PreparedStatement ps, Order o) throws SQLException {
         ps.setString(1, o.getOrderId().toString());
         ps.setString(2, o.getBuyerUUID().toString());
@@ -400,9 +517,9 @@ public class StorageManager {
         ps.setString(11, o.getStatus().name());
         ps.setLong(12, o.getClaimedAt());
         ps.setString(13, o.getClaimedBy() != null ? o.getClaimedBy().toString() : null);
+        ps.setLong(14, o.getUpdatedAt());
     }
 
-    /** Converts a ResultSet row to an Order. Returns null on parse failure. */
     private Order rowToOrder(ResultSet rs) {
         try {
             UUID orderId   = UUID.fromString(rs.getString("order_id"));
@@ -421,11 +538,18 @@ public class StorageManager {
 
             long claimedAt   = rs.getLong("claimed_at");
             String claimedByStr = rs.getString("claimed_by");
-            UUID claimedBy = (claimedByStr != null && !claimedByStr.isEmpty()) ? UUID.fromString(claimedByStr) : null;
+            UUID claimedBy = (claimedByStr != null && !claimedByStr.isEmpty())
+                    ? UUID.fromString(claimedByStr) : null;
+            long updatedAt = 0L;
+            try {
+                updatedAt = rs.getLong("updated_at");
+            } catch (SQLException ignored) {
+                updatedAt = createdAt;
+            }
 
             return new Order(orderId, buyerUUID, buyerName, template,
                     amountReq, amountFilled, price, funds,
-                    createdAt, expiresAt, status, claimedAt, claimedBy);
+                    createdAt, expiresAt, status, claimedAt, claimedBy, updatedAt);
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Failed to parse order row", e);
             return null;

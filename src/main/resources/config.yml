@@ -21,8 +21,23 @@ orders:
   tax-percent: 0.0
 
 database:
-  # Filename of the SQLite database, relative to the plugin data folder.
+  # Storage backend: sqlite (default, single-server) or mysql (shared DB for cross-server).
+  type: sqlite
+
+  # SQLite only — filename relative to the plugin data folder.
   filename: donutorders.db
+
+  # MySQL only — all servers in a network should point at the same database.
+  mysql:
+    host: localhost
+    port: 3306
+    database: donutorders
+    username: donutorders
+    password: ""
+    pool-size: 10
+
+  # MySQL cross-server sync: poll remote changes into the in-memory cache (seconds).
+  sync-interval-seconds: 5
 
 gui:
   # How many order entries to show per page on the public orders GUI.

@@ -165,12 +165,16 @@ public class DonutOrders extends JavaPlugin {
         FoliaScheduler.runGlobalRepeating(
             () -> orderManager.runExpiryCheck(), 20L * 60, 20L * 60);
 
+        // MySQL cross-server order sync
+        storageManager.startSyncTask();
+
         // Chat input timeout cleanup: every 30 seconds
         FoliaScheduler.runGlobalRepeating(
             () -> chatInputHandler.tickTimeouts(), 20L * 30, 20L * 30);
 
         getLogger().info("[DonutOrders] Enabled successfully. "
-            + storageManager.getAllOrders().size() + " orders loaded.");
+            + storageManager.getAllOrders().size() + " orders loaded."
+            + (storageManager.isMysql() ? " (MySQL backend)" : " (SQLite backend)"));
 
         ModrinthUpdateChecker.checkAsync(this);
     }

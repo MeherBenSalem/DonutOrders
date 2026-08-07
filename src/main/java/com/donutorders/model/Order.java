@@ -54,6 +54,7 @@ public class Order {
 
     private volatile long claimedAt;
     private volatile UUID claimedBy;
+    private volatile long updatedAt;
 
     // ── Anti-duplication lock (transient — not persisted) ─────────────────────
 
@@ -84,7 +85,7 @@ public class Order {
                  long expiresAt,
                  OrderStatus status) {
         this(orderId, buyerUUID, buyerName, itemTemplate, amountRequested, amountFulfilled,
-             pricePerItem, remainingFunds, createdAt, expiresAt, status, 0L, null);
+             pricePerItem, remainingFunds, createdAt, expiresAt, status, 0L, null, createdAt);
     }
 
     public Order(UUID orderId,
@@ -100,6 +101,25 @@ public class Order {
                  OrderStatus status,
                  long claimedAt,
                  UUID claimedBy) {
+        this(orderId, buyerUUID, buyerName, itemTemplate, amountRequested, amountFulfilled,
+             pricePerItem, remainingFunds, createdAt, expiresAt, status, claimedAt, claimedBy,
+             Math.max(createdAt, claimedAt));
+    }
+
+    public Order(UUID orderId,
+                 UUID buyerUUID,
+                 String buyerName,
+                 ItemStack itemTemplate,
+                 int amountRequested,
+                 int amountFulfilled,
+                 double pricePerItem,
+                 double remainingFunds,
+                 long createdAt,
+                 long expiresAt,
+                 OrderStatus status,
+                 long claimedAt,
+                 UUID claimedBy,
+                 long updatedAt) {
         this.orderId = orderId;
         this.buyerUUID = buyerUUID;
         this.buyerName = buyerName;
@@ -113,6 +133,7 @@ public class Order {
         this.status = status;
         this.claimedAt = claimedAt;
         this.claimedBy = claimedBy;
+        this.updatedAt = updatedAt;
     }
 
     // ── Derived helpers ───────────────────────────────────────────────────────
@@ -180,6 +201,7 @@ public class Order {
     public OrderStatus getStatus()     { return status; }
     public long getClaimedAt()         { return claimedAt; }
     public UUID getClaimedBy()         { return claimedBy; }
+    public long getUpdatedAt()         { return updatedAt; }
 
     // ── Setters (package-internal mutation — always followed by a DB write) ────
 
@@ -201,5 +223,19 @@ public class Order {
 
     public void setClaimedBy(UUID claimedBy) {
         this.claimedBy = claimedBy;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    /** Applies mutable fields from a fresher DB snapshot onto this cached instance. */
+    public void applyRemoteState(Order fromDb) {
+        this.amountFulfilled = fromDb.amountFulfilled;
+        this.remainingFunds = fromDb.remainingFunds;
+        this.status = fromDb.status;
+        this.claimedAt = fromDb.claimedAt;
+        this.claimedBy = fromDb.claimedBy;
+        this.updatedAt = fromDb.updatedAt;
     }
 }

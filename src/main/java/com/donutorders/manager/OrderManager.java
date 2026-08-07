@@ -177,120 +177,124 @@ public class OrderManager {
                              ItemStack[] items,
                              BiConsumer<Boolean, String> callback) {
 
-        Order order = storage.getOrder(orderId);
-        if (order == null) {
-            String msg = MessageHelper.get("order-not-found", "&cᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ.");
-            FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, msg),
-                    () -> callback.accept(false, msg));
-            return;
-        }
-
-        if (order.getStatus() != OrderStatus.ACTIVE) {
-            String msg = MessageHelper.get("order-no-longer-active",
-                    "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ.");
-            FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, msg),
-                    () -> callback.accept(false, msg));
-            return;
-        }
-
-        if (order.getBuyerUUID().equals(seller.getUniqueId())) {
-            String msg = MessageHelper.get("delivery-own-order",
-                    "&cʏᴏᴜ ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀ.");
-            FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, msg),
-                    () -> callback.accept(false, msg));
-            return;
-        }
-
-        // Count valid items (loose GUI stacks + shulker contents)
-        int amountNeeded = order.getAmountRemaining();
-        ItemStack template = order.getItemTemplate();
-        int validCount = Math.min(
-                DeliveryItemUtils.countAvailable(seller, items, template),
-                amountNeeded);
-
-        if (validCount == 0) {
-            String msg = MessageHelper.get("delivery-no-items",
-                    "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ.");
-            FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, msg),
-                    () -> callback.accept(false, msg));
-            return;
-        }
-
-        // Acquire delivery lock — prevents concurrent duplicate deliveries
-        if (!order.tryLockDelivery()) {
-            String msg = MessageHelper.get("delivery-in-progress",
-                    "&cᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ.");
-            FoliaScheduler.runAtEntity(seller,
-                    () -> callback.accept(false, msg),
-                    () -> callback.accept(false, msg));
-            return;
-        }
-
-        // All economy and inventory work MUST occur on the seller's region thread.
-        FoliaScheduler.runAtEntity(seller, () -> {
-            try {
-                int deliverCount = Math.min(
-                        DeliveryItemUtils.countAvailable(seller, items, template),
-                        amountNeeded);
-                if (deliverCount == 0) {
-                    callback.accept(false, MessageHelper.get("delivery-no-items",
-                            "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
-                    return;
-                }
-
-                ItemStack[] stashItems = DeliveryItemUtils.extract(
-                        seller, items, template, deliverCount);
-                int extractedCount = 0;
-                for (ItemStack stashItem : stashItems) {
-                    if (stashItem != null) {
-                        extractedCount += stashItem.getAmount();
-                    }
-                }
-                if (extractedCount == 0) {
-                    callback.accept(false, MessageHelper.get("delivery-no-items",
-                            "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
-                    return;
-                }
-
-                double payout = order.getPricePerItem() * extractedCount;
-
-                // Pay the seller
-                economy.depositPlayer(seller, payout);
-
-                // Update order in memory
-                order.setAmountFulfilled(order.getAmountFulfilled() + extractedCount);
-                order.setRemainingFunds(order.getRemainingFunds() - payout);
-
-                if (order.isFullyFulfilled()) {
-                    order.setStatus(OrderStatus.PENDING);
-                }
-
-                // Return shulker boxes from the GUI snapshot (contents already extracted)
-                DeliveryItemUtils.returnSnapshotShulkers(seller, items);
-
-                // Persist order update first, then stash
-                storage.updateOrder(order, () ->
-                    storage.loadStash(order.getOrderId(), existingStash -> {
-                        ItemStack[] mergedStash = mergeStash(existingStash, stashItems);
-                        storage.saveStash(order.getOrderId(), mergedStash, () ->
-                            FoliaScheduler.runAtEntity(seller,
-                                () -> callback.accept(true, null),
-                                () -> callback.accept(true, null)));
-                    })
-                );
-
-            } finally {
-                // Always release the lock, even if an exception was thrown
-                order.unlockDelivery();
+        storage.refreshOrderFromDb(orderId, refreshed -> {
+            Order order = refreshed;
+            if (order == null) {
+                String msg = MessageHelper.get("order-not-found", "&cᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ.");
+                FoliaScheduler.runAtEntity(seller,
+                        () -> callback.accept(false, msg),
+                        () -> callback.accept(false, msg));
+                return;
             }
-        }, () -> {
-            order.unlockDelivery();
-            callback.accept(false, MessageHelper.get("player-retired",
-                    "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ."));
+
+            if (order.getStatus() != OrderStatus.ACTIVE) {
+                String msg = MessageHelper.get("order-no-longer-active",
+                        "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ.");
+                FoliaScheduler.runAtEntity(seller,
+                        () -> callback.accept(false, msg),
+                        () -> callback.accept(false, msg));
+                return;
+            }
+
+            if (order.getBuyerUUID().equals(seller.getUniqueId())) {
+                String msg = MessageHelper.get("delivery-own-order",
+                        "&cʏᴏᴜ ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀ.");
+                FoliaScheduler.runAtEntity(seller,
+                        () -> callback.accept(false, msg),
+                        () -> callback.accept(false, msg));
+                return;
+            }
+
+            int amountNeeded = order.getAmountRemaining();
+            ItemStack template = order.getItemTemplate();
+            int validCount = Math.min(
+                    DeliveryItemUtils.countAvailable(seller, items, template),
+                    amountNeeded);
+
+            if (validCount == 0) {
+                String msg = MessageHelper.get("delivery-no-items",
+                        "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ.");
+                FoliaScheduler.runAtEntity(seller,
+                        () -> callback.accept(false, msg),
+                        () -> callback.accept(false, msg));
+                return;
+            }
+
+            if (!order.tryLockDelivery()) {
+                String msg = MessageHelper.get("delivery-in-progress",
+                        "&cᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ.");
+                FoliaScheduler.runAtEntity(seller,
+                        () -> callback.accept(false, msg),
+                        () -> callback.accept(false, msg));
+                return;
+            }
+
+            final int expectedFilled = order.getAmountFulfilled();
+
+            FoliaScheduler.runAtEntity(seller, () -> {
+                try {
+                    int deliverCount = Math.min(
+                            DeliveryItemUtils.countAvailable(seller, items, template),
+                            amountNeeded);
+                    if (deliverCount == 0) {
+                        callback.accept(false, MessageHelper.get("delivery-no-items",
+                                "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
+                        return;
+                    }
+
+                    ItemStack[] stashItems = DeliveryItemUtils.extract(
+                            seller, items, template, deliverCount);
+                    int extractedCount = 0;
+                    for (ItemStack stashItem : stashItems) {
+                        if (stashItem != null) {
+                            extractedCount += stashItem.getAmount();
+                        }
+                    }
+                    if (extractedCount == 0) {
+                        callback.accept(false, MessageHelper.get("delivery-no-items",
+                                "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
+                        return;
+                    }
+
+                    double payout = order.getPricePerItem() * extractedCount;
+                    economy.depositPlayer(seller, payout);
+
+                    order.setAmountFulfilled(order.getAmountFulfilled() + extractedCount);
+                    order.setRemainingFunds(order.getRemainingFunds() - payout);
+
+                    if (order.isFullyFulfilled()) {
+                        order.setStatus(OrderStatus.PENDING);
+                    }
+
+                    DeliveryItemUtils.returnSnapshotShulkers(seller, items);
+
+                    storage.updateOrderOptimistic(order, expectedFilled, OrderStatus.ACTIVE, success -> {
+                        if (!success) {
+                            FoliaScheduler.runAtEntity(seller, () -> callback.accept(false,
+                                    MessageHelper.get("order-no-longer-active",
+                                            "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ.")),
+                                    () -> callback.accept(false,
+                                            MessageHelper.get("order-no-longer-active",
+                                                    "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ.")));
+                            return;
+                        }
+                        storage.loadStash(order.getOrderId(), existingStash -> {
+                            ItemStack[] mergedStash = mergeStash(existingStash, stashItems);
+                            storage.saveStash(order.getOrderId(), mergedStash, () ->
+                                FoliaScheduler.runAtEntity(seller,
+                                    () -> callback.accept(true, null),
+                                    () -> callback.accept(true, null)));
+                        });
+                    });
+
+                } finally {
+                    order.unlockDelivery();
+                }
+            }, () -> {
+                order.unlockDelivery();
+                callback.accept(false, MessageHelper.get("player-retired",
+                        "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ."));
+            });
         });
     }
 
@@ -346,106 +350,99 @@ public class OrderManager {
      * @param callback {@code (success)} on buyer's thread
      */
     public void collectStash(Player buyer, UUID orderId, Consumer<Boolean> callback) {
-        Order order = storage.getOrder(orderId);
-        if (order == null) {
-            FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false),
-                    () -> callback.accept(false));
-            return;
-        }
+        storage.refreshOrderFromDb(orderId, order -> {
+            if (order == null) {
+                FoliaScheduler.runAtEntity(buyer,
+                        () -> callback.accept(false),
+                        () -> callback.accept(false));
+                return;
+            }
 
-        // Check if player is the correct receiver
-        if (!order.getBuyerUUID().equals(buyer.getUniqueId())) {
-            LOG.log(Level.WARNING, "[Security] Player {0} attempted to claim stash of order {1} owned by {2} ({3}).",
-                new Object[]{buyer.getName(), orderId, order.getBuyerName(), order.getBuyerUUID()});
-            FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false),
-                    () -> callback.accept(false));
-            return;
-        }
+            if (!order.getBuyerUUID().equals(buyer.getUniqueId())) {
+                LOG.log(Level.WARNING, "[Security] Player {0} attempted to claim stash of order {1} owned by {2} ({3}).",
+                    new Object[]{buyer.getName(), orderId, order.getBuyerName(), order.getBuyerUUID()});
+                FoliaScheduler.runAtEntity(buyer,
+                        () -> callback.accept(false),
+                        () -> callback.accept(false));
+                return;
+            }
 
-        // Reject if already claimed (Idempotency Protection)
-        if (order.getStatus() == OrderStatus.CLAIMED) {
-            LOG.log(Level.WARNING, "[Security] Player {0} tried to collect order {1} which was ALREADY CLAIMED (claimed at: {2}, claimed by: {3}). Replay attack blocked.",
-                new Object[]{buyer.getName(), orderId, order.getClaimedAt(), order.getClaimedBy()});
-            FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false),
-                    () -> callback.accept(false));
-            return;
-        }
+            if (order.getStatus() == OrderStatus.CLAIMED) {
+                LOG.log(Level.WARNING, "[Security] Player {0} tried to collect order {1} which was ALREADY CLAIMED (claimed at: {2}, claimed by: {3}). Replay attack blocked.",
+                    new Object[]{buyer.getName(), orderId, order.getClaimedAt(), order.getClaimedBy()});
+                FoliaScheduler.runAtEntity(buyer,
+                        () -> callback.accept(false),
+                        () -> callback.accept(false));
+                return;
+            }
 
-        if (order.getStatus() != OrderStatus.PENDING) {
-            FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false),
-                    () -> callback.accept(false));
-            return;
-        }
+            if (order.getStatus() != OrderStatus.PENDING) {
+                FoliaScheduler.runAtEntity(buyer,
+                        () -> callback.accept(false),
+                        () -> callback.accept(false));
+                return;
+            }
 
-        // Acquire lock per order claim (Atomic Order Collection)
-        if (!order.tryLockClaim()) {
-            LOG.log(Level.WARNING, "[Security] Player {0} triggered rapid concurrent collection for order {1}. Lock acquisition blocked.",
-                new Object[]{buyer.getName(), orderId});
-            FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false),
-                    () -> callback.accept(false));
-            return;
-        }
+            if (!order.tryLockClaim()) {
+                LOG.log(Level.WARNING, "[Security] Player {0} triggered rapid concurrent collection for order {1}. Lock acquisition blocked.",
+                    new Object[]{buyer.getName(), orderId});
+                FoliaScheduler.runAtEntity(buyer,
+                        () -> callback.accept(false),
+                        () -> callback.accept(false));
+                return;
+            }
 
-        // Re-check order status under lock
-        if (order.getStatus() != OrderStatus.PENDING) {
-            order.unlockClaim();
-            FoliaScheduler.runAtEntity(buyer,
-                    () -> callback.accept(false),
-                    () -> callback.accept(false));
-            return;
-        }
+            if (order.getStatus() != OrderStatus.PENDING) {
+                order.unlockClaim();
+                FoliaScheduler.runAtEntity(buyer,
+                        () -> callback.accept(false),
+                        () -> callback.accept(false));
+                return;
+            }
 
-        // Mark as CLAIMED immediately
-        order.setStatus(OrderStatus.CLAIMED);
-        order.setClaimedAt(System.currentTimeMillis());
-        order.setClaimedBy(buyer.getUniqueId());
+            order.setStatus(OrderStatus.CLAIMED);
+            order.setClaimedAt(System.currentTimeMillis());
+            order.setClaimedBy(buyer.getUniqueId());
 
-        // Load the stash asynchronously from DB
-        storage.loadStash(orderId, stash -> {
-            // Save updated order status to DB asynchronously
-            storage.updateOrder(order, () -> {
-                // Clear the stash in database asynchronously
-                storage.clearStash(orderId, () -> {
-                    // Bounce back to the buyer's region thread to execute item insertion & refunds
-                    FoliaScheduler.runAtEntity(buyer, () -> {
-                        try {
-                            boolean anyItems = false;
-                            for (ItemStack item : stash) {
-                                if (item != null && item.getType().isItem()) {
-                                    anyItems = true;
-                                    Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(item);
-                                    if (!overflow.isEmpty()) {
-                                        // Drop overflow at player's feet
-                                        overflow.values().forEach(drop ->
-                                                buyer.getWorld().dropItemNaturally(buyer.getLocation(), drop));
+            storage.loadStash(orderId, stash ->
+                storage.updateOrderOptimistic(order, null, OrderStatus.PENDING, success -> {
+                    if (!success) {
+                        order.unlockClaim();
+                        FoliaScheduler.runAtEntity(buyer,
+                                () -> callback.accept(false),
+                                () -> callback.accept(false));
+                        return;
+                    }
+                    storage.clearStash(orderId, () ->
+                        FoliaScheduler.runAtEntity(buyer, () -> {
+                            try {
+                                for (ItemStack item : stash) {
+                                    if (item != null && item.getType().isItem()) {
+                                        Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(item);
+                                        if (!overflow.isEmpty()) {
+                                            overflow.values().forEach(drop ->
+                                                    buyer.getWorld().dropItemNaturally(buyer.getLocation(), drop));
+                                        }
                                     }
                                 }
-                            }
 
-                            // Refund remaining funds if expired/cancelled and not yet refunded
-                            double refund = order.getRemainingFunds();
-                            if (refund > 0) {
-                                economy.depositPlayer(buyer, refund);
-                                order.setRemainingFunds(0);
-                                storage.updateOrder(order, null);
-                            }
+                                double refund = order.getRemainingFunds();
+                                if (refund > 0) {
+                                    economy.depositPlayer(buyer, refund);
+                                    order.setRemainingFunds(0);
+                                    storage.updateOrder(order, null);
+                                }
 
-                            callback.accept(true);
-                        } finally {
-                            // Release lock
+                                callback.accept(true);
+                            } finally {
+                                order.unlockClaim();
+                            }
+                        }, () -> {
                             order.unlockClaim();
-                        }
-                    }, () -> {
-                        order.unlockClaim();
-                        callback.accept(false);
-                    });
-                });
-            });
+                            callback.accept(false);
+                        }));
+                })
+            );
         });
     }
 
