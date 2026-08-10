@@ -16,6 +16,7 @@ import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
+import com.donutorders.util.EnchantOrderUtils;
 import com.donutorders.util.ModrinthUpdateChecker;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.CommandExecutor;
@@ -212,6 +213,7 @@ public class DonutOrders extends JavaPlugin {
     public void reloadPluginConfig() {
         reloadConfig();
         reloadMessages();
+        EnchantOrderUtils.clearBookEnchantmentCache();
         if (allowedItemsManager != null) {
             allowedItemsManager.reload();
         }

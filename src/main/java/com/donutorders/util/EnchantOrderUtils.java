@@ -30,19 +30,36 @@ public final class EnchantOrderUtils {
         return material == Material.ENCHANTED_BOOK;
     }
 
+    /** Clears the cached enchant list (call on plugin reload). */
+    public static void clearBookEnchantmentCache() {
+        cachedBookEnchantments = null;
+    }
+
     /**
      * Returns all registry enchantments that can be stored on an enchanted book,
      * sorted alphabetically by {@link #prettyEnchantName(Enchantment)}.
+     *
+     * <p>Uses {@link EnchantmentStorageMeta#addStoredEnchant} instead of
+     * {@link Enchantment#canEnchantItem}: on modern Paper, {@code canEnchantItem}
+     * returns false for {@link Material#ENCHANTED_BOOK}, which left the picker empty.
      */
     public static List<Enchantment> listBookEnchantments() {
         if (cachedBookEnchantments != null) {
             return cachedBookEnchantments;
         }
 
-        ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
         List<Enchantment> enchants = new ArrayList<>();
         for (Enchantment enchant : Registry.ENCHANTMENT) {
-            if (enchant.getMaxLevel() > 0 && enchant.canEnchantItem(book)) {
+            if (enchant.getMaxLevel() <= 0) {
+                continue;
+            }
+            ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
+            ItemMeta meta = book.getItemMeta();
+            if (!(meta instanceof EnchantmentStorageMeta storageMeta)) {
+                continue;
+            }
+            // ignoreRestrictions=true: books store nearly all registry enchants via anvil/orders
+            if (storageMeta.addStoredEnchant(enchant, 1, true)) {
                 enchants.add(enchant);
             }
         }
