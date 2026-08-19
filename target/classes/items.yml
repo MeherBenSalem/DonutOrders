@@ -50,3 +50,4 @@ allowed-items:
   - STRING
   - FEATHER
   - COBBLESTONE
+  - ENCHANTED_BOOK

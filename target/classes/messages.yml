@@ -35,6 +35,8 @@ chat-input-timeout: "&7ᴄʜᴀᴛ ɪɴᴘᴜᴛ ᴛɪᴍᴇᴅ ᴏᴜᴛ."
 
 # ── Order messages ────────────────────────────────────────────────────────────
 order-created: "&aᴏʀᴅᴇʀ ᴄʀᴇᴀᴛᴇᴅ! &f{0} &7× {1} &7@ &f{2} &7ᴇᴀᴄʜ &8(&f{3} &7ᴡɪᴛʜᴅʀᴀᴡɴ&8)"
+# Public chat announce. {0}=buyer {1}=item {2}=amount {3}=price per item
+order-created-broadcast: "&e{0} &7created a buy order: &f{1} &7× {2} &7@ &f{3} &7each"
 max-orders-reached: "&cʏᴏᴜ ʜᴀᴠᴇ ʀᴇᴀᴄʜᴇᴅ ᴛʜᴇ ᴍᴀxɪᴍᴜᴍ ɴᴜᴍʙᴇʀ ᴏꜰ ᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ ({0})."
 insufficient-funds: "&cɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜰᴜɴᴅꜱ. ʏᴏᴜ ɴᴇᴇᴅ &f{0}&c ʙᴜᴛ ᴏɴʟʏ ʜᴀᴠᴇ &f{1}&c."
 order-create-failed: "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴏʀᴅᴇʀ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."
@@ -155,6 +157,23 @@ gui:
   # ── GUI: New Order (item picker) ──────────────────────────────────────────
   new-order:
     title: "ɴᴇᴡ ᴏʀᴅᴇʀ"
+    title-filtered: "&fɴᴇᴡ ᴏʀᴅᴇʀ &8| &e{query}"
+    search-prompt: "&eᴇɴᴛᴇʀ ᴀɴ ɪᴛᴇᴍ ɴᴀᴍᴇ ᴛᴏ ꜱᴇᴀʀᴄʜ (ᴏʀ &c{0}&e):"
+    search:
+      name: "&e&lꜱᴇᴀʀᴄʜ"
+      lore:
+        - "&7ꜰɪʟᴛᴇʀ ɪᴛᴇᴍꜱ ʙʏ ɴᴀᴍᴇ."
+        - "&7ᴄʟɪᴄᴋ ᴛᴏ ᴛʏᴘᴇ ᴀ ꜱᴇᴀʀᴄʜ ᴛᴇʀᴍ."
+    clear-search:
+      name: "&c&lᴄʟᴇᴀʀ ꜱᴇᴀʀᴄʜ"
+      lore:
+        - "&7ᴀᴄᴛɪᴠᴇ ꜰɪʟᴛᴇʀ: &f{query}"
+        - "&7ᴄʟɪᴄᴋ ᴛᴏ ᴄʟᴇᴀʀ."
+    no-results:
+      name: "&c&lɴᴏ ʀᴇꜱᴜʟᴛꜱ"
+      lore:
+        - "&7ɴᴏ ɪᴛᴇᴍꜱ ᴍᴀᴛᴄʜ &f{query}&7."
+        - "&7ᴛʀʏ ᴀ ᴅɪꜰꜰᴇʀᴇɴᴛ ꜱᴇᴀʀᴄʜ ᴏʀ ᴄʟᴇᴀʀ ᴛʜᴇ ꜰɪʟᴛᴇʀ."
     material:
       name: "&f{item}"
       lore:
@@ -165,6 +184,34 @@ gui:
       name: "&c&lʙᴀᴄᴋ"
       lore:
         - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ."
+
+  # ── GUI: Enchant Picker (enchanted books) ─────────────────────────────────
+  enchant-picker:
+    title: "ꜱᴇʟᴇᴄᴛ ᴇɴᴄʜᴀɴᴛ"
+    enchant:
+      name: "&f{enchant}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ʟᴇꜰᴛ ᴄʟɪᴄᴋ &eᴛᴏ ꜱᴇʟᴇᴄᴛ"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+    back:
+      name: "&c&lʙᴀᴄᴋ"
+      lore:
+        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ɪᴛᴇᴍ ꜱᴇʟᴇᴄᴛɪᴏɴ."
+
+  # ── GUI: Enchant Level ────────────────────────────────────────────────────
+  enchant-level:
+    title: "ꜱᴇʟᴇᴄᴛ ʟᴇᴠᴇʟ"
+    level:
+      name: "&f{enchant} {level}"
+      lore:
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+        - "&7ʟᴇꜰᴛ ᴄʟɪᴄᴋ &eᴛᴏ ꜱᴇʟᴇᴄᴛ"
+        - "&8━━━━━━━━━━━━━━━━━━━━"
+    back:
+      name: "&c&lʙᴀᴄᴋ"
+      lore:
+        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ᴇɴᴄʜᴀɴᴛ ꜱᴇʟᴇᴄᴛɪᴏɴ."
 
   # ── GUI: Order Details ────────────────────────────────────────────────────
   order-detail:

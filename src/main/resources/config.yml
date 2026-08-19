@@ -20,6 +20,10 @@ orders:
   # Set to 0 to disable.  Tax is silently discarded (economy sink).
   tax-percent: 0.0
 
+  # Announce new buy orders in chat to all online players except the creator.
+  # The creator still gets the private order-created confirmation.
+  broadcast-on-create: true
+
 database:
   # Storage backend: sqlite (default, single-server) or mysql (shared DB for cross-server).
   type: sqlite

@@ -35,6 +35,8 @@ chat-input-timeout: "&7ᴄʜᴀᴛ ɪɴᴘᴜᴛ ᴛɪᴍᴇᴅ ᴏᴜᴛ."
 
 # ── Order messages ────────────────────────────────────────────────────────────
 order-created: "&aᴏʀᴅᴇʀ ᴄʀᴇᴀᴛᴇᴅ! &f{0} &7× {1} &7@ &f{2} &7ᴇᴀᴄʜ &8(&f{3} &7ᴡɪᴛʜᴅʀᴀᴡɴ&8)"
+# Public chat announce. {0}=buyer {1}=item {2}=amount {3}=price per item
+order-created-broadcast: "&e{0} &7created a buy order: &f{1} &7× {2} &7@ &f{3} &7each"
 max-orders-reached: "&cʏᴏᴜ ʜᴀᴠᴇ ʀᴇᴀᴄʜᴇᴅ ᴛʜᴇ ᴍᴀxɪᴍᴜᴍ ɴᴜᴍʙᴇʀ ᴏꜰ ᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ ({0})."
 insufficient-funds: "&cɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜰᴜɴᴅꜱ. ʏᴏᴜ ɴᴇᴇᴅ &f{0}&c ʙᴜᴛ ᴏɴʟʏ ʜᴀᴠᴇ &f{1}&c."
 order-create-failed: "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴏʀᴅᴇʀ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."

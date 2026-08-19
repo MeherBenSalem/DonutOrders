@@ -5,6 +5,8 @@ com\donutorders\gui\ConfirmDeliveryGUI.class
 com\donutorders\manager\ChatInputHandler.class
 com\donutorders\gui\DeliverItemsGUI.class
 com\donutorders\listener\InventoryListener$PlayerInteractionState.class
+com\donutorders\gui\EnchantLevelGUI.class
+com\donutorders\gui\EnchantPickerGUI.class
 com\donutorders\util\ItemUtils.class
 com\donutorders\manager\ChatInputHandler$ChatSession.class
 com\donutorders\gui\PublicOrdersGUI.class
@@ -21,11 +23,13 @@ com\donutorders\model\Order.class
 com\donutorders\manager\GUIManager.class
 com\donutorders\manager\OrderLimitManager.class
 com\donutorders\util\DeliveryItemUtils.class
+com\donutorders\util\EnchantOrderUtils.class
 com\donutorders\util\MessageHelper$1.class
 com\donutorders\gui\CollectStashGUI.class
 com\donutorders\gui\YourOrdersGUI.class
 com\donutorders\gui\NewOrderGUI.class
 com\donutorders\manager\OrderManager.class
+com\donutorders\util\OrderBroadcast.class
 com\donutorders\command\OrdersCommand.class
 com\donutorders\scheduler\FoliaScheduler.class
 com\donutorders\listener\PlayerQuitListener.class

@@ -6,8 +6,10 @@ import com.donutorders.model.OrderStatus;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
 import com.donutorders.util.DeliveryItemUtils;
+import com.donutorders.util.ItemUtils;
 import com.donutorders.util.MessageHelper;
 import com.donutorders.util.NumberFormatter;
+import com.donutorders.util.OrderBroadcast;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -147,9 +149,13 @@ public class OrderManager {
             // Persist async; callback from storage stays on async thread, so
             // we re-schedule back to the player thread here.
             storage.saveOrder(order, () ->
-                    FoliaScheduler.runAtEntity(buyer,
-                            () -> callback.accept(true, null),
-                            () -> callback.accept(true, null)));
+                    FoliaScheduler.runAtEntity(buyer, () -> {
+                        broadcastOrderCreated(buyer, order);
+                        callback.accept(true, null);
+                    }, () -> {
+                        broadcastOrderCreated(buyer, order);
+                        callback.accept(true, null);
+                    }));
 
         }, () -> callback.accept(false, MessageHelper.get("player-retired",
                 "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ.")));
@@ -475,6 +481,31 @@ public class OrderManager {
                 }
             }
         }
+    }
+
+    /**
+     * Sends a public chat announce for a newly created order. The buyer is
+     * skipped because they already received {@code order-created}.
+     */
+    private void broadcastOrderCreated(Player buyer, Order order) {
+        DonutOrders plugin = DonutOrders.getInstance();
+        if (plugin == null || !OrderBroadcast.isEnabled(plugin.getConfig())) {
+            return;
+        }
+        String item = ItemUtils.describeOrderItem(order.getItemTemplate());
+        String price = NumberFormatter.formatPrice(order.getPricePerItem());
+        String buyerName = buyer != null ? buyer.getName() : order.getBuyerName();
+        String message = MessageHelper.prefix()
+                + OrderBroadcast.formatBody(buyerName, item, order.getAmountRequested(), price);
+        UUID skip = buyer != null ? buyer.getUniqueId() : order.getBuyerUUID();
+        FoliaScheduler.runGlobal(() -> {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (!OrderBroadcast.shouldNotify(online.getUniqueId(), skip)) {
+                    continue;
+                }
+                FoliaScheduler.runAtEntity(online, () -> online.sendMessage(message));
+            }
+        });
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

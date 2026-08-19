@@ -7,8 +7,11 @@ update-check:
   enabled: true
 
 orders:
-  # Maximum simultaneous active orders a single player can hold.
-  max-per-player: 10
+  # Default maximum simultaneous active orders (no rank/permission override).
+  default-limit: 2
+
+  # Legacy alias — kept in sync with default-limit for older configs.
+  max-per-player: 2
 
   # How many days an order lives before it expires and is refunded.
   default-expiry-days: 7
@@ -17,12 +20,37 @@ orders:
   # Set to 0 to disable.  Tax is silently discarded (economy sink).
   tax-percent: 0.0
 
+  # Announce new buy orders in chat to all online players except the creator.
+  # The creator still gets the private order-created confirmation.
+  broadcast-on-create: true
+
 database:
-  # Filename of the SQLite database, relative to the plugin data folder.
+  # Storage backend: sqlite (default, single-server) or mysql (shared DB for cross-server).
+  type: sqlite
+
+  # SQLite only — filename relative to the plugin data folder.
   filename: donutorders.db
+
+  # MySQL only — all servers in a network should point at the same database.
+  mysql:
+    host: localhost
+    port: 3306
+    database: donutorders
+    username: donutorders
+    password: ""
+    pool-size: 10
+
+  # MySQL cross-server sync: poll remote changes into the in-memory cache (seconds).
+  sync-interval-seconds: 5
 
 gui:
   # How many order entries to show per page on the public orders GUI.
   orders-per-page: 45
+
+# Per-rank active order limits (LuckPerms group.<rank> permission).
+# Highest matching rank wins. Override with donutorders.limit.<n> permissions.
+rank-limits:
+  default: 2
+  vip: 5
 
 # Allowed order materials are configured in items.yml.
