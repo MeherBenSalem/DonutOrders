@@ -5,6 +5,8 @@
 update-check:
   # Check Modrinth for a newer release when the plugin starts.
   enabled: true
+  # Notify players with donutorders.admin when they join if an update was found.
+  notify-ops-on-join: true
 
 orders:
   # Default maximum simultaneous active orders (no rank/permission override).

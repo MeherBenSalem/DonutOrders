@@ -1,0 +1,13 @@
+DonutOrders
+Copyright 2026 NightBeam
+
+This product is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes software developed by NightBeam Studio.
+Third-party dependencies retain their own licenses; see each dependency's
+project page for details. Runtime soft-dependencies (Vault, LuckPerms,
+PlaceholderAPI) are not redistributed with this plugin. Bundled libraries
+(HikariCP, MySQL Connector/J, SQLite JDBC, SLF4J) keep their upstream licenses.

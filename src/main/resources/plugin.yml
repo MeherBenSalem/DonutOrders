@@ -3,7 +3,8 @@ version: '${project.version}'
 main: com.donutorders.DonutOrders
 api-version: '1.20'
 description: Player-driven buy-order marketplace.
-author: DonutOrders
+author: NightBeam
+website: https://github.com/MeherBenSalem/DonutOrders
 
 # Required so that Folia loads this plugin.
 # Without this flag Folia silently disables the plugin.

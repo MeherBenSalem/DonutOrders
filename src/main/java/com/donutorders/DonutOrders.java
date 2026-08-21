@@ -67,6 +67,8 @@ public class DonutOrders extends JavaPlugin {
     /** The loaded messages.yml configuration. */
     private FileConfiguration messages;
     private boolean pluginReady;
+    private volatile String updateLatestVersion;
+    private volatile String updateDownloadUrl;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -177,7 +179,35 @@ public class DonutOrders extends JavaPlugin {
             + storageManager.getAllOrders().size() + " orders loaded."
             + (storageManager.isMysql() ? " (MySQL backend)" : " (SQLite backend)"));
 
+        try {
+            new org.bstats.bukkit.Metrics(this, 33559);
+        } catch (Throwable t) {
+            getLogger().log(Level.WARNING, "[DonutOrders] Failed to start bStats metrics.", t);
+        }
+
         ModrinthUpdateChecker.checkAsync(this);
+    }
+
+    public void setUpdateAvailable(String latestVersion, String downloadUrl) {
+        this.updateLatestVersion = latestVersion;
+        this.updateDownloadUrl = downloadUrl;
+    }
+
+    public void clearUpdateAvailable() {
+        this.updateLatestVersion = null;
+        this.updateDownloadUrl = null;
+    }
+
+    public boolean hasUpdateAvailable() {
+        return updateLatestVersion != null && !updateLatestVersion.isBlank();
+    }
+
+    public String getUpdateLatestVersion() {
+        return updateLatestVersion;
+    }
+
+    public String getUpdateDownloadUrl() {
+        return updateDownloadUrl != null ? updateDownloadUrl : "https://modrinth.com/plugin/donut-orders";
     }
 
     private void registerStartupOrdersCommand() {

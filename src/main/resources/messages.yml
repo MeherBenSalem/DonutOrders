@@ -21,6 +21,7 @@ no-permission: "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏ�
 player-only: "&cᴏɴʟʏ ᴘʟᴀʏᴇʀꜱ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ."
 config-reloaded: "&aᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ ʀᴇʟᴏᴀᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ."
 plugin-starting: "&eᴅᴏɴᴜᴛᴏʀᴅᴇʀꜱ ɪꜱ ꜱᴛɪʟʟ ꜱᴛᴀʀᴛɪɴɢ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ɪɴ ᴀ ᴍᴏᴍᴇɴᴛ."
+update-available: "&e[DonutOrders] &7Update available: &f{0} &7— &b{1}"
 
 # Keyword players type in chat to cancel amount/price input (case-insensitive)
 chat-cancel-keyword: "cancel"

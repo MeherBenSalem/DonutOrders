@@ -7,11 +7,28 @@
 
     <groupId>com.donutorders</groupId>
     <artifactId>DonutOrders</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
     <packaging>jar</packaging>
 
     <name>DonutOrders</name>
     <description>Player-driven buy-order marketplace with full Folia support.</description>
+    <url>https://github.com/MeherBenSalem/DonutOrders</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>NightBeam</name>
+            <organization>NightBeam Studio</organization>
+            <organizationUrl>https://nightbeam.cloud</organizationUrl>
+        </developer>
+    </developers>
 
     <properties>
         <java.version>17</java.version>
@@ -38,6 +55,11 @@
         <repository>
             <id>placeholderapi</id>
             <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+        </repository>
+        <!-- bStats -->
+        <repository>
+            <id>codemc-repo</id>
+            <url>https://repo.codemc.io/repository/maven-public/</url>
         </repository>
     </repositories>
 
@@ -120,6 +142,14 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-nop</artifactId>
             <version>2.0.13</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- bStats — shaded and relocated -->
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>3.0.2</version>
             <scope>compile</scope>
         </dependency>
 
@@ -224,6 +254,10 @@
                                     <pattern>org.slf4j</pattern>
                                     <shadedPattern>com.donutorders.libs.slf4j</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.bstats</pattern>
+                                    <shadedPattern>com.donutorders.libs.bstats</shadedPattern>
+                                </relocation>
                             </relocations>
                             <transformers>
                                 <!-- Merge SLF4J + JDBC service-provider files for shaded libs -->
@@ -249,6 +283,15 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}</directory>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+                <filtering>false</filtering>
             </resource>
         </resources>
     </build>

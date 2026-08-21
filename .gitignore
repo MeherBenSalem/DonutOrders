@@ -1,0 +1,47 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.cursor/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs / temp
+*.log
+*.tmp
+*.bak
+
+# Built artifacts
+*.jar
+!**/maven-wrapper.jar
+releases/
+dist/
+
+# Local AI / graph tools
+graphify-out/
+
+# Env / secrets
+.env
+.env.*
+!.env.example

@@ -206,6 +206,8 @@ jobs:
           function detect(jar) {
             const n = path.basename(jar).toLowerCase();
             const p = jar.replace(/\\/g, '/').toLowerCase();
+            const isPlugin = fs.existsSync('src/main/resources/plugin.yml')
+              || fs.existsSync('plugin.yml');
             let loader = null;
             if (n.includes('neoforge') || p.includes('/neoforge/')) loader = 'neoforge';
             else if (n.includes('fabric') || p.includes('/fabric/')) loader = 'fabric';
@@ -213,11 +215,9 @@ jobs:
             else if (n.includes('forge') || p.includes('/forge/')) loader = 'forge';
             else if (
               n.includes('paper') || n.includes('bukkit') || n.includes('spigot') ||
-              n.includes('folia') || n.includes('purpur') ||
-              fs.existsSync('src/main/resources/plugin.yml') ||
-              fs.existsSync('plugin.yml')
+              n.includes('folia') || n.includes('purpur') || isPlugin
             ) {
-              loader = 'paper';
+              loader = isPlugin ? 'bukkit-plugin' : 'paper';
             } else if (process.env.DEFAULT_LOADER) {
               loader = process.env.DEFAULT_LOADER.toLowerCase();
             } else {
@@ -230,8 +230,16 @@ jobs:
             else if (m1) gv = m1[1];
             // Plugin-only projects often omit MC in the jar name; allow override
             if (!gv && process.env.DEFAULT_GAME_VERSION) gv = process.env.DEFAULT_GAME_VERSION;
-            return { loader, gv };
+            return { loader, gv, isPlugin };
           }
+
+          const PLUGIN_LOADERS = ['bukkit', 'spigot', 'paper', 'purpur', 'folia'];
+          const PLUGIN_GAME_VERSIONS = [
+            '1.20.1', '1.20.2', '1.20.3', '1.20.4', '1.20.5', '1.20.6',
+            '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6',
+            '1.21.7', '1.21.8', '1.21.9', '1.21.10', '1.21.11',
+            '26.1', '26.1.1', '26.1.2', '26.2',
+          ];
 
           function flattenVersions(payload) {
             const flat = [];
@@ -258,17 +266,21 @@ jobs:
             if (doModrinth) {
               let uploaded = 0;
               for (const jar of jars) {
-                const { loader, gv } = detect(jar);
-                const gameVersions = gv ? [gv] : ['1.21.1'];
-                // One Modrinth version per jar — never multi-file attach across loaders/MC lines
+                const { loader, gv, isPlugin } = detect(jar);
+                const gameVersions = isPlugin
+                  ? PLUGIN_GAME_VERSIONS
+                  : (gv ? [gv] : ['1.21.1']);
+                const loaders = isPlugin
+                  ? PLUGIN_LOADERS
+                  : [loader === 'paper' ? 'paper' : loader];
                 const body = {
-                  name: `${version} · ${loader} · ${gameVersions[0]}`,
-                  version_number: `${version}+${loader}-${gameVersions[0]}`,
+                  name: isPlugin ? `${version}` : `${version} · ${loader} · ${gameVersions[0]}`,
+                  version_number: isPlugin ? version : `${version}+${loader}-${gameVersions[0]}`,
                   changelog,
                   dependencies: [],
                   game_versions: gameVersions,
                   version_type: 'release',
-                  loaders: [loader === 'paper' ? 'paper' : loader],
+                  loaders,
                   featured: false,
                   status: 'listed',
                   project_id: process.env.MODRINTH_ID,
@@ -321,7 +333,33 @@ jobs:
 
             let uploaded = 0;
             for (const jar of jars) {
-              const { loader, gv } = detect(jar);
+              const { loader, gv, isPlugin } = detect(jar);
+              if (isPlugin) {
+                const gameVersionNames = [
+                  ...PLUGIN_GAME_VERSIONS,
+                  'Bukkit', 'Spigot', 'Paper', 'Purpur', 'Folia', 'Client', 'Server',
+                ];
+                const meta = {
+                  changelog,
+                  changelogType: 'markdown',
+                  displayName: `${version}`,
+                  gameVersionNames,
+                  releaseType: 'release',
+                };
+                const cfForm = new FormData();
+                cfForm.append('metadata', JSON.stringify(meta));
+                cfForm.append('file', new Blob([fs.readFileSync(jar)]), path.basename(jar));
+                const cfRes = await fetch(
+                  `https://minecraft.curseforge.com/api/projects/${process.env.CURSEFORGE_ID}/upload-file`,
+                  { method: 'POST', headers: { 'X-Api-Token': process.env.CURSEFORGE_TOKEN }, body: cfForm },
+                );
+                const cfText = await cfRes.text();
+                if (!cfRes.ok) throw new Error('CurseForge ' + cfRes.status + ' ' + cfText.slice(0, 500));
+                console.log('CurseForge OK', meta.displayName, path.basename(jar), cfText.slice(0, 160));
+                uploaded += 1;
+                continue;
+              }
+
               const want = gv || '1.21.1';
               const mcId = findVersionId(flat, want);
               const loaderId = LOADER_IDS[loader];
