@@ -2,6 +2,7 @@ package com.donutorders.gui;
 
 import com.donutorders.DonutOrders;
 import com.donutorders.manager.GUIManager;
+import com.donutorders.util.ChatInputParser;
 import com.donutorders.util.EnchantOrderUtils;
 import com.donutorders.util.ItemUtils;
 import com.donutorders.util.MessageHelper;
@@ -238,11 +239,8 @@ public class NewOrderGUI extends BaseGUI {
 
     private static void handleAmountInput(GUIManager guiManager, Player player,
                                           ItemStack template, String raw) {
-        int amount;
-        try {
-            amount = Integer.parseInt(raw);
-            if (amount <= 0) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
+        var parsed = ChatInputParser.parseAmount(raw);
+        if (parsed.isEmpty()) {
             MessageHelper.send(player, "chat-input-invalid-number",
                 "&cɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ᴡʜᴏʟᴇ ɴᴜᴍʙᴇʀ.");
             String cancelWord = MessageHelper.cancelKeyword();
@@ -253,6 +251,7 @@ public class NewOrderGUI extends BaseGUI {
                 () -> guiManager.openYourOrders(player, 0));
             return;
         }
+        int amount = parsed.getAsInt();
 
         GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
         if (state != null) state.pendingAmount = amount;
@@ -273,11 +272,8 @@ public class NewOrderGUI extends BaseGUI {
 
     private static void handlePriceInput(GUIManager guiManager, Player player,
                                          ItemStack template, int amount, String raw) {
-        double price;
-        try {
-            price = Double.parseDouble(raw);
-            if (price <= 0) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
+        var parsed = ChatInputParser.parsePrice(raw);
+        if (parsed.isEmpty()) {
             MessageHelper.send(player, "chat-input-invalid-price",
                 "&cɪɴᴠᴀʟɪᴅ ᴘʀɪᴄᴇ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ.");
             String cancelWord = MessageHelper.cancelKeyword();
@@ -288,6 +284,7 @@ public class NewOrderGUI extends BaseGUI {
                 () -> guiManager.openYourOrders(player, 0));
             return;
         }
+        double price = parsed.getAsDouble();
 
         final double finalPrice = price;
         guiManager.getOrderManager().createOrder(player, template, amount, finalPrice,

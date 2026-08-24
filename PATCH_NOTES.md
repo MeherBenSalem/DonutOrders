@@ -1,5 +1,11 @@
 # Patch notes
 
+## 1.8.1
+
+- New-order chat input (amount, price, cancel keyword) now reads Paper's Adventure chat event so integers are accepted on 1.20.1–26.2
+- Amount/price parsing ignores color codes and commas; whole values like `64.0` work
+- Folia no longer treats a retired entity callback as cancel while you are typing a number
+
 ## 1.8.0
 
 - Added bStats metrics (plugin ID **33559**)
