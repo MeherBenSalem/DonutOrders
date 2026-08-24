@@ -11,8 +11,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const support = JSON.parse(
   fs.readFileSync(path.join(root, "release", "supported-minecraft.json"), "utf8"),
 );
-const gameVersions = support.game_versions;
-const loaders = support.loaders;
+const gameVersions = Array.isArray(support) ? support : support.game_versions;
+const loaders = Array.isArray(support)
+  ? ["paper", "folia", "purpur", "spigot", "bukkit"]
+  : support.loaders;
+if (!Array.isArray(gameVersions) || gameVersions.length === 0) {
+  throw new Error("release/supported-minecraft.json has no game versions");
+}
+if (!Array.isArray(loaders) || loaders.length === 0) {
+  throw new Error("release/supported-minecraft.json has no loaders");
+}
 
 const version = process.env.VERSION;
 const platforms = (process.env.PLATFORMS || "both").toLowerCase();
@@ -78,7 +86,7 @@ const jarName = path.basename(jar);
       primary_file: "file_0",
     };
     const form = new FormData();
-    form.append("data", JSON.stringify(body));
+    form.append("data", new Blob([JSON.stringify(body)], { type: "application/json" }));
     form.append("file_0", new Blob([fs.readFileSync(jar)]), jarName);
     const mrRes = await fetch("https://api.modrinth.com/v2/version", {
       method: "POST",
