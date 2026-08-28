@@ -15,9 +15,15 @@ import org.bukkit.inventory.ItemStack;
 import java.util.List;
 
 /**
- * GUI: the buyer's personal order management screen.
+ * GUI: the buyer's personal order management screen (active, history, or admin history).
  */
 public class YourOrdersGUI extends BaseGUI {
+
+    public enum ViewMode {
+        ACTIVE,
+        HISTORY,
+        ADMIN_HISTORY
+    }
 
     private static final int PAGE_SIZE   = 45;
     private static final int SLOT_PREV   = 45;
@@ -29,15 +35,38 @@ public class YourOrdersGUI extends BaseGUI {
     private final List<Order> orders;
     private final int page;
     private final int maxPage;
+    private final ViewMode viewMode;
+    private final String adminTargetName;
+    private final java.util.UUID adminTargetUuid;
 
-    public YourOrdersGUI(GUIManager guiManager, List<Order> orders, int page) {
-        super(Bukkit.createInventory(null, 54,
-                MessageHelper.get("gui.your-orders.title", "ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ")));
+    public YourOrdersGUI(GUIManager guiManager, List<Order> orders, int page,
+                         ViewMode viewMode, String adminTargetName) {
+        this(guiManager, orders, page, viewMode, null, adminTargetName);
+    }
+
+    public YourOrdersGUI(GUIManager guiManager, List<Order> orders, int page,
+                         ViewMode viewMode, java.util.UUID adminTargetUuid,
+                         String adminTargetName) {
+        super(Bukkit.createInventory(null, 54, titleFor(viewMode, adminTargetName)));
         this.guiManager = guiManager;
         this.orders     = orders;
         this.page       = page;
         this.maxPage    = orders.isEmpty() ? 0 : Math.max(0, (orders.size() - 1) / PAGE_SIZE);
+        this.viewMode   = viewMode;
+        this.adminTargetName = adminTargetName;
+        this.adminTargetUuid = adminTargetUuid;
         build();
+    }
+
+    private static String titleFor(ViewMode viewMode, String adminTargetName) {
+        return switch (viewMode) {
+            case ACTIVE -> MessageHelper.get("gui.your-orders.title", "ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ");
+            case HISTORY -> MessageHelper.get("gui.order-history.title", "ᴏʀᴅᴇʀ ʜɪꜱᴛᴏʀʏ");
+            case ADMIN_HISTORY -> MessageHelper.getNamed(
+                    "gui.order-history.admin-title",
+                    "ᴏʀᴅᴇʀ ʜɪꜱᴛᴏʀʏ: {player}",
+                    "player", adminTargetName != null ? adminTargetName : "?");
+        };
     }
 
     private void build() {
@@ -65,15 +94,27 @@ public class YourOrdersGUI extends BaseGUI {
                     "max_page", String.valueOf(maxPage + 1))));
         }
 
-        inventory.setItem(SLOT_NEW, ItemUtils.createGuiItem(
-            Material.LIME_STAINED_GLASS_PANE,
-            MessageHelper.get("gui.your-orders.new-order.name", "&a&lɴᴇᴡ ᴏʀᴅᴇʀ"),
-            MessageHelper.getList("gui.your-orders.new-order.lore")));
+        if (viewMode == ViewMode.ACTIVE) {
+            inventory.setItem(SLOT_NEW, ItemUtils.createGuiItem(
+                Material.LIME_STAINED_GLASS_PANE,
+                MessageHelper.get("gui.your-orders.new-order.name", "&a&lɴᴇᴡ ᴏʀᴅᴇʀ"),
+                MessageHelper.getList("gui.your-orders.new-order.lore")));
 
-        inventory.setItem(SLOT_BROWSE, ItemUtils.createGuiItem(
-            Material.COMPASS,
-            MessageHelper.get("gui.your-orders.browse-market.name", "&b&lʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ"),
-            MessageHelper.getList("gui.your-orders.browse-market.lore")));
+            inventory.setItem(SLOT_BROWSE, ItemUtils.createGuiItem(
+                Material.COMPASS,
+                MessageHelper.get("gui.your-orders.browse-market.name", "&b&lʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ"),
+                MessageHelper.getList("gui.your-orders.browse-market.lore")));
+        } else if (viewMode == ViewMode.HISTORY) {
+            inventory.setItem(SLOT_NEW, ItemUtils.createGuiItem(
+                Material.BOOK,
+                MessageHelper.get("gui.order-history.active-orders.name", "&e&lᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ"),
+                MessageHelper.getList("gui.order-history.active-orders.lore")));
+
+            inventory.setItem(SLOT_BROWSE, ItemUtils.createGuiItem(
+                Material.COMPASS,
+                MessageHelper.get("gui.your-orders.browse-market.name", "&b&lʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ"),
+                MessageHelper.getList("gui.your-orders.browse-market.lore")));
+        }
 
         fillEmpty();
     }
@@ -109,26 +150,55 @@ public class YourOrdersGUI extends BaseGUI {
 
     @Override
     public void handleClick(Player player, int slot, ItemStack clicked, ClickType type) {
-        if (slot == SLOT_NEW) {
-            guiManager.openNewOrderPicker(player);
-            return;
+        if (viewMode == ViewMode.ACTIVE) {
+            if (slot == SLOT_NEW) {
+                guiManager.openNewOrderPicker(player);
+                return;
+            }
+            if (slot == SLOT_BROWSE) {
+                guiManager.openPublicOrders(player, 0);
+                return;
+            }
+        } else if (viewMode == ViewMode.HISTORY) {
+            if (slot == SLOT_NEW) {
+                guiManager.openYourActiveOrders(player, 0);
+                return;
+            }
+            if (slot == SLOT_BROWSE) {
+                guiManager.openPublicOrders(player, 0);
+                return;
+            }
         }
-        if (slot == SLOT_BROWSE) {
-            guiManager.openPublicOrders(player, 0);
-            return;
-        }
+
         if (slot == SLOT_PREV && page > 0) {
-            guiManager.openYourOrders(player, page - 1);
+            reopen(player, page - 1);
             return;
         }
         if (slot == SLOT_NEXT && page < maxPage) {
-            guiManager.openYourOrders(player, page + 1);
+            reopen(player, page + 1);
+            return;
+        }
+
+        if (viewMode == ViewMode.ADMIN_HISTORY) {
             return;
         }
 
         int orderIndex = page * PAGE_SIZE + slot;
         if (slot < PAGE_SIZE && orderIndex < orders.size()) {
             guiManager.openOrderDetail(player, orders.get(orderIndex).getOrderId());
+        }
+    }
+
+    private void reopen(Player player, int newPage) {
+        switch (viewMode) {
+            case ACTIVE -> guiManager.openYourActiveOrders(player, newPage);
+            case HISTORY -> guiManager.openYourOrderHistory(player, newPage);
+            case ADMIN_HISTORY -> {
+                if (adminTargetUuid != null) {
+                    guiManager.openAdminOrderHistory(
+                            player, adminTargetUuid, adminTargetName, newPage);
+                }
+            }
         }
     }
 }

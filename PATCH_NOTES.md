@@ -1,5 +1,11 @@
 # Patch notes
 
+## 1.9.0
+
+- Split commands: `/order` (your active orders), `/order history`, `/orders` (public market), `/orderadmin` (reload, history, simulate)
+- Order history GUI for completed, expired, cancelled, and claimed orders
+- `/orderadmin reload` works from console; admin history view for any player
+
 ## 1.8.1
 
 - New-order chat input (amount, price, cancel keyword) now reads Paper's Adventure chat event so integers are accepted on 1.20.1–26.2

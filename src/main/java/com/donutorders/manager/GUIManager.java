@@ -3,6 +3,7 @@ package com.donutorders.manager;
 import com.donutorders.DonutOrders;
 import com.donutorders.gui.*;
 import com.donutorders.model.Order;
+import com.donutorders.model.OrderStatus;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
 import org.bukkit.Bukkit;
@@ -11,6 +12,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -95,11 +97,35 @@ public class GUIManager {
         }, null);
     }
 
-    /** Opens the buyer's own orders list. */
+    /** Opens the buyer's active orders (ACTIVE + PENDING). */
+    public void openYourActiveOrders(Player player, int page) {
+        openYourOrdersView(player, page, YourOrdersGUI.ViewMode.ACTIVE, null, null);
+    }
+
+    /** Opens the buyer's order history. */
+    public void openYourOrderHistory(Player player, int page) {
+        openYourOrdersView(player, page, YourOrdersGUI.ViewMode.HISTORY, null, null);
+    }
+
+    /** Opens another player's order history (admin). */
+    public void openAdminOrderHistory(Player viewer, UUID targetUuid, String targetName, int page) {
+        openYourOrdersView(viewer, page, YourOrdersGUI.ViewMode.ADMIN_HISTORY, targetUuid, targetName);
+    }
+
+    /** @deprecated use {@link #openYourActiveOrders(Player, int)} */
     public void openYourOrders(Player player, int page) {
+        openYourActiveOrders(player, page);
+    }
+
+    private void openYourOrdersView(Player player, int page, YourOrdersGUI.ViewMode viewMode,
+                                    UUID adminTargetUuid, String adminTargetName) {
         FoliaScheduler.runAtEntity(player, () -> {
-            List<Order> playerOrders = storage.getPlayerOrders(player.getUniqueId());
-            YourOrdersGUI gui = new YourOrdersGUI(this, playerOrders, page);
+            UUID ownerUuid = viewMode == YourOrdersGUI.ViewMode.ADMIN_HISTORY
+                    ? adminTargetUuid : player.getUniqueId();
+            List<Order> playerOrders = filterOrdersForView(
+                    storage.getPlayerOrders(ownerUuid), viewMode);
+            YourOrdersGUI gui = new YourOrdersGUI(
+                    this, playerOrders, page, viewMode, adminTargetUuid, adminTargetName);
 
             PlayerGUIState state = new PlayerGUIState();
             state.type = GUIType.YOUR_ORDERS;
@@ -107,6 +133,22 @@ public class GUIManager {
             player.openInventory(gui.getInventory());
             states.put(player.getUniqueId(), state);
         }, null);
+    }
+
+    private static List<Order> filterOrdersForView(List<Order> orders, YourOrdersGUI.ViewMode viewMode) {
+        List<Order> filtered = new ArrayList<>();
+        for (Order order : orders) {
+            OrderStatus status = order.getStatus();
+            if (viewMode == YourOrdersGUI.ViewMode.ACTIVE) {
+                if (status == OrderStatus.ACTIVE || status == OrderStatus.PENDING) {
+                    filtered.add(order);
+                }
+            } else if (status == OrderStatus.COMPLETED || status == OrderStatus.EXPIRED
+                    || status == OrderStatus.CANCELLED || status == OrderStatus.CLAIMED) {
+                filtered.add(order);
+            }
+        }
+        return filtered;
     }
 
     /** Opens the item picker for creating a new order (first page, clears any search). */

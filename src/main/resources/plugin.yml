@@ -16,16 +16,24 @@ softdepend:
   - PlaceholderAPI
 
 commands:
+  order:
+    description: View and manage your buy orders.
+    usage: /order [history]
+    permission: donutorders.use
   orders:
-    description: Open the orders marketplace.
+    description: Browse the public order marketplace.
     usage: /orders
     permission: donutorders.use
-    aliases: [order, market, donutorders]
+    aliases: [market, donutorders]
+  orderadmin:
+    description: DonutOrders administration.
+    usage: /orderadmin <reload|history|simulate> [player]
+    permission: donutorders.admin
 
 permissions:
   donutorders.use:
-    description: Allows players to use /orders.
+    description: Allows players to use /order and /orders.
     default: true
   donutorders.admin:
-    description: Allows admin sub-commands (reload).
+    description: Allows /orderadmin commands (reload, history, simulate).
     default: op

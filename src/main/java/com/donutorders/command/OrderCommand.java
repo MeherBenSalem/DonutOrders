@@ -12,13 +12,18 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Handles {@code /orders} — opens the public order marketplace.
+ * Handles {@code /order} — the buyer's personal order views.
+ *
+ * <ul>
+ *   <li>{@code /order} — active orders (ACTIVE + PENDING)</li>
+ *   <li>{@code /order history} — completed / expired / cancelled / claimed orders</li>
+ * </ul>
  */
-public class OrdersCommand implements CommandExecutor, TabCompleter {
+public class OrderCommand implements CommandExecutor, TabCompleter {
 
     private final GUIManager guiManager;
 
-    public OrdersCommand(GUIManager guiManager) {
+    public OrderCommand(GUIManager guiManager) {
         this.guiManager = guiManager;
     }
 
@@ -37,19 +42,27 @@ public class OrdersCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args.length > 0) {
-            MessageHelper.send(player, "command.orders.usage",
-                "&cᴜꜱᴀɢᴇ: /orders");
+        if (args.length >= 1 && args[0].equalsIgnoreCase("history")) {
+            guiManager.openYourOrderHistory(player, 0);
             return true;
         }
 
-        guiManager.openPublicOrders(player, 0);
+        if (args.length >= 1) {
+            MessageHelper.send(player, "command.order.usage",
+                "&cᴜꜱᴀɢᴇ: /order [history]");
+            return true;
+        }
+
+        guiManager.openYourActiveOrders(player, 0);
         return true;
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command,
                                       String alias, String[] args) {
+        if (args.length == 1) {
+            return Collections.singletonList("history");
+        }
         return Collections.emptyList();
     }
 }

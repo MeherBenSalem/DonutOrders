@@ -108,7 +108,7 @@ public class PublicOrdersGUI extends BaseGUI {
             return;
         }
         if (slot == SLOT_MY) {
-            guiManager.openYourOrders(player, 0);
+            guiManager.openYourActiveOrders(player, 0);
             return;
         }
 

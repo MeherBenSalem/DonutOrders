@@ -1,5 +1,7 @@
 package com.donutorders;
 
+import com.donutorders.command.OrderAdminCommand;
+import com.donutorders.command.OrderCommand;
 import com.donutorders.command.OrdersCommand;
 import com.donutorders.listener.ChatListener;
 import com.donutorders.listener.InventoryListener;
@@ -134,14 +136,9 @@ public class DonutOrders extends JavaPlugin {
         guiManager        = new GUIManager(storageManager, orderManager, chatInputHandler);
 
         // Register commands
-        var ordersCmd = getCommand("orders");
-        if (ordersCmd != null) {
-            OrdersCommand executor = new OrdersCommand(guiManager);
-            ordersCmd.setExecutor(executor);
-            ordersCmd.setTabCompleter(executor);
-        } else {
-            getLogger().severe("[DonutOrders] /orders command was not found in plugin.yml.");
-        }
+        registerCommand("orders", new OrdersCommand(guiManager));
+        registerCommand("order", new OrderCommand(guiManager));
+        registerCommand("orderadmin", new OrderAdminCommand(guiManager));
         pluginReady = true;
 
         // Register listeners
@@ -211,19 +208,39 @@ public class DonutOrders extends JavaPlugin {
     }
 
     private void registerStartupOrdersCommand() {
-        var ordersCmd = getCommand("orders");
-        if (ordersCmd == null) {
-            getLogger().severe("[DonutOrders] /orders command was not found in plugin.yml.");
+        registerStartupCommand("orders");
+        registerStartupCommand("order");
+        registerStartupCommand("orderadmin");
+    }
+
+    private void registerStartupCommand(String name) {
+        var cmd = getCommand(name);
+        if (cmd == null) {
+            getLogger().severe("[DonutOrders] /" + name + " command was not found in plugin.yml.");
             return;
         }
 
-        ordersCmd.setExecutor((sender, command, label, args) -> {
+        cmd.setExecutor((sender, command, label, args) -> {
             sender.sendMessage(com.donutorders.util.MessageHelper.get(
                 "plugin-starting",
                 "&eᴅᴏɴᴜᴛᴏʀᴅᴇʀꜱ ɪꜱ ꜱᴛɪʟʟ ꜱᴛᴀʀᴛɪɴɢ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ɪɴ ᴀ ᴍᴏᴍᴇɴᴛ."));
             return true;
         });
-        ordersCmd.setTabCompleter((sender, command, alias, args) -> Collections.emptyList());
+        cmd.setTabCompleter((sender, command, alias, args) -> Collections.emptyList());
+    }
+
+    private void registerCommand(String name, Object executor) {
+        var cmd = getCommand(name);
+        if (cmd == null) {
+            getLogger().severe("[DonutOrders] /" + name + " command was not found in plugin.yml.");
+            return;
+        }
+        if (executor instanceof CommandExecutor commandExecutor) {
+            cmd.setExecutor(commandExecutor);
+        }
+        if (executor instanceof TabCompleter tabCompleter) {
+            cmd.setTabCompleter(tabCompleter);
+        }
     }
 
     @Override

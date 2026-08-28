@@ -2,7 +2,7 @@
 #  DonutOrders  –  messages.yml
 #
 #  Edit this file to translate the entire plugin into your language.
-#  No recompile needed — run:  /orders admin reload
+#  No recompile needed — run:  /orderadmin reload
 #
 #  Formatting:
 #    &0–&f, &k–&o, &l, &m, &n, &r   standard Minecraft color/format codes
@@ -19,6 +19,16 @@
 prefix: "&8[&b&lᴅᴏɴᴜᴛ&f&lᴏʀᴅᴇʀꜱ&8] &r"
 no-permission: "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴅᴏ ᴛʜᴀᴛ."
 player-only: "&cᴏɴʟʏ ᴘʟᴀʏᴇʀꜱ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ."
+player-not-found: "&cᴘʟᴀʏᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ: &f{player}"
+
+command:
+  order:
+    usage: "&cᴜꜱᴀɢᴇ: /order [history]"
+  orders:
+    usage: "&cᴜꜱᴀɢᴇ: /orders"
+  orderadmin:
+    usage: "&cᴜꜱᴀɢᴇ: /orderadmin <reload|history|simulate> [player]"
+    history-usage: "&cᴜꜱᴀɢᴇ: /orderadmin history <player>"
 config-reloaded: "&aᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ ʀᴇʟᴏᴀᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ."
 plugin-starting: "&eᴅᴏɴᴜᴛᴏʀᴅᴇʀꜱ ɪꜱ ꜱᴛɪʟʟ ꜱᴛᴀʀᴛɪɴɢ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ɪɴ ᴀ ᴍᴏᴍᴇɴᴛ."
 update-available: "&e[DonutOrders] &7Update available: &f{0} &7— &b{1}"
@@ -154,6 +164,14 @@ gui:
         - "&eʟᴇꜰᴛ ᴄʟɪᴄᴋ &7ᴛᴏ ᴠɪᴇᴡ ᴅᴇᴛᴀɪʟꜱ"
     stash-has-items: "&e⬛ ꜱᴛᴀꜱʜ ʜᴀꜱ ɪᴛᴇᴍꜱ"
     stash-empty: "&7ꜱᴛᴀꜱʜ ɪꜱ ᴇᴍᴘᴛʏ"
+
+  order-history:
+    title: "ᴏʀᴅᴇʀ ʜɪꜱᴛᴏʀʏ"
+    admin-title: "ᴏʀᴅᴇʀ ʜɪꜱᴛᴏʀʏ: {player}"
+    active-orders:
+      name: "&e&lᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ"
+      lore:
+        - "&7ᴠɪᴇᴡ ʏᴏᴜʀ ᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ."
 
   # ── GUI: New Order (item picker) ──────────────────────────────────────────
   new-order:
