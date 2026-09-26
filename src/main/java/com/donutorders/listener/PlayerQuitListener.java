@@ -1,6 +1,5 @@
 package com.donutorders.listener;
 
-import com.donutorders.gui.DeliverItemsGUI;
 import com.donutorders.manager.ChatInputHandler;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.manager.OrderLimitManager;
@@ -16,9 +15,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
  * <ul>
  *   <li>Cancels any pending chat input session (triggers the {@code onCancel}
  *       callback so the GUI state is cleaned up properly).</li>
- *   <li>If the player had a {@link DeliverItemsGUI} open, items are returned to
- *       the player's inventory (dropped at their last location since they are
- *       off-line; on Folia the entity is still valid during this event).</li>
+ *   <li>If the player had a delivery or confirm-delivery GUI open, items are
+ *       returned exactly once (close may also fire; settlement is idempotent).</li>
  *   <li>Clears the GUI state entry from {@link GUIManager}.</li>
  * </ul>
  *
@@ -45,14 +43,7 @@ public class PlayerQuitListener implements Listener {
         // Cancel any chat input session — triggers onCancel if registered
         chatInputHandler.cancelSession(player);
 
-        // Return delivery items if the player quits mid-delivery
-        GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
-        if (state != null
-                && state.type == GUIManager.GUIType.DELIVER_ITEMS
-                && state.gui instanceof DeliverItemsGUI deliverGUI) {
-            deliverGUI.returnItems(player);
-        }
-
+        guiManager.returnHeldDeliveryItems(player);
         guiManager.clearState(player.getUniqueId());
         orderLimitManager.evict(player.getUniqueId());
     }

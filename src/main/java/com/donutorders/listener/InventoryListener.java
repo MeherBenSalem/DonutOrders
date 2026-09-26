@@ -1,7 +1,5 @@
 package com.donutorders.listener;
 
-import com.donutorders.gui.BaseGUI;
-import com.donutorders.gui.ConfirmDeliveryGUI;
 import com.donutorders.gui.DeliverItemsGUI;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.util.DeliveryItemUtils;
@@ -12,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -282,24 +281,25 @@ public class InventoryListener implements Listener {
 
         interactionStates.remove(player.getUniqueId());
 
-        GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
-        if (state == null) return;
-
-        // If player closes DeliverItemsGUI without confirming, return all items
-        if (state.type == GUIManager.GUIType.DELIVER_ITEMS
-                && state.gui instanceof DeliverItemsGUI deliverGUI) {
-            // Run on entity thread (we're already here, but future-proof with explicit scheduling)
-            com.donutorders.scheduler.FoliaScheduler.runAtEntity(player,
-                () -> deliverGUI.returnItems(player), null);
-        } else if (state.type == GUIManager.GUIType.CONFIRM_DELIVERY
-                && state.gui instanceof ConfirmDeliveryGUI confirmGUI) {
-            // Player closed ConfirmDeliveryGUI without clicking Confirm or Cancel
-            // (e.g. pressed ESC). Return the item snapshot if not yet submitted.
-            com.donutorders.scheduler.FoliaScheduler.runAtEntity(player,
-                () -> confirmGUI.returnItems(player), null);
-        }
-
+        // Return held delivery items synchronously. A delayed task races with
+        // Cancel (which already returned the snapshot) and can miss quit/disable.
+        guiManager.returnHeldDeliveryItems(player);
         guiManager.clearState(player.getUniqueId());
+    }
+
+    // ── Death ─────────────────────────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        if (guiManager.getState(player.getUniqueId()) == null) {
+            return;
+        }
+        if (event.getKeepInventory()) {
+            guiManager.returnHeldDeliveryItems(player);
+        } else {
+            guiManager.returnHeldDeliveryItems(player, event.getDrops());
+        }
     }
 }
 

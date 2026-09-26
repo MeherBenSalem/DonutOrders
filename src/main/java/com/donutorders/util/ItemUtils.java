@@ -1,6 +1,7 @@
 package com.donutorders.util;
 
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -242,5 +243,58 @@ public final class ItemUtils {
      */
     public static String describeOrderItem(ItemStack item) {
         return EnchantOrderUtils.describeOrderItem(item);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    //  Give-or-drop — used when returning delivery GUI items
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Adds {@code item} to the player's inventory, dropping leftovers at their
+     * feet. No-op for null/AIR. The stack is cloned so callers can retain or
+     * clear the source independently.
+     */
+    public static void giveOrDrop(Player player, ItemStack item) {
+        if (player == null || item == null || item.getType() == Material.AIR) {
+            return;
+        }
+        ItemStack toGive = item.clone();
+        var overflow = player.getInventory().addItem(toGive);
+        if (overflow.isEmpty()) {
+            return;
+        }
+        if (player.getWorld() == null) {
+            return;
+        }
+        overflow.values().forEach(drop ->
+                player.getWorld().dropItemNaturally(player.getLocation(), drop));
+    }
+
+    /**
+     * Gives every non-empty stack in {@code items}. When {@code clearSource} is
+     * true, each slot is nulled after the copy is taken so a second pass cannot
+     * duplicate.
+     */
+    public static void giveOrDropAll(Player player, ItemStack[] items, boolean clearSource) {
+        if (items == null) {
+            return;
+        }
+        for (int i = 0; i < items.length; i++) {
+            ItemStack item = items[i];
+            if (clearSource) {
+                items[i] = null;
+            }
+            giveOrDrop(player, item);
+        }
+    }
+
+    /** Gives every non-empty stack in {@code items}. */
+    public static void giveOrDropAll(Player player, Iterable<ItemStack> items) {
+        if (items == null) {
+            return;
+        }
+        for (ItemStack item : items) {
+            giveOrDrop(player, item);
+        }
     }
 }

@@ -1,5 +1,10 @@
 # Patch notes
 
+## 1.9.1
+
+- Fixed delivery item duplication when cancelling after proceeding from the deliver-items box (GitHub #5): cancel and GUI close no longer both return the same snapshot
+- Delivery items are returned exactly once on cancel, ESC-close, disconnect, death, and plugin disable; double-click confirm/cancel cannot duplicate or lose the box contents
+
 ## 1.9.0
 
 - Split commands: `/order` (your active orders), `/order history`, `/orders` (public market), `/orderadmin` (reload, history, simulate)

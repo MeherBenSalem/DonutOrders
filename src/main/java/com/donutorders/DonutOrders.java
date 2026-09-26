@@ -25,6 +25,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -245,6 +246,17 @@ public class DonutOrders extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (guiManager != null) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                try {
+                    guiManager.returnHeldDeliveryItems(player);
+                    player.closeInventory();
+                } catch (Throwable t) {
+                    getLogger().log(Level.WARNING,
+                        "[DonutOrders] Failed to return delivery items for " + player.getName(), t);
+                }
+            }
+        }
         if (storageManager != null) {
             storageManager.close();
         }
