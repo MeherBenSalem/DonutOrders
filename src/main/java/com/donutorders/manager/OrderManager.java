@@ -187,27 +187,21 @@ public class OrderManager {
             Order order = refreshed;
             if (order == null) {
                 String msg = MessageHelper.get("order-not-found", "&cᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ.");
-                FoliaScheduler.runAtEntity(seller,
-                        () -> callback.accept(false, msg),
-                        () -> callback.accept(false, msg));
+                failAndReturnItems(seller, items, msg, callback);
                 return;
             }
 
             if (order.getStatus() != OrderStatus.ACTIVE) {
                 String msg = MessageHelper.get("order-no-longer-active",
                         "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ.");
-                FoliaScheduler.runAtEntity(seller,
-                        () -> callback.accept(false, msg),
-                        () -> callback.accept(false, msg));
+                failAndReturnItems(seller, items, msg, callback);
                 return;
             }
 
             if (order.getBuyerUUID().equals(seller.getUniqueId())) {
                 String msg = MessageHelper.get("delivery-own-order",
                         "&cʏᴏᴜ ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀ.");
-                FoliaScheduler.runAtEntity(seller,
-                        () -> callback.accept(false, msg),
-                        () -> callback.accept(false, msg));
+                failAndReturnItems(seller, items, msg, callback);
                 return;
             }
 
@@ -220,18 +214,14 @@ public class OrderManager {
             if (validCount == 0) {
                 String msg = MessageHelper.get("delivery-no-items",
                         "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ.");
-                FoliaScheduler.runAtEntity(seller,
-                        () -> callback.accept(false, msg),
-                        () -> callback.accept(false, msg));
+                failAndReturnItems(seller, items, msg, callback);
                 return;
             }
 
             if (!order.tryLockDelivery()) {
                 String msg = MessageHelper.get("delivery-in-progress",
                         "&cᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ.");
-                FoliaScheduler.runAtEntity(seller,
-                        () -> callback.accept(false, msg),
-                        () -> callback.accept(false, msg));
+                failAndReturnItems(seller, items, msg, callback);
                 return;
             }
 
@@ -243,6 +233,7 @@ public class OrderManager {
                             DeliveryItemUtils.countAvailable(seller, items, template),
                             amountNeeded);
                     if (deliverCount == 0) {
+                        ItemUtils.giveOrDropAll(seller, items, true);
                         callback.accept(false, MessageHelper.get("delivery-no-items",
                                 "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
                         return;
@@ -257,6 +248,7 @@ public class OrderManager {
                         }
                     }
                     if (extractedCount == 0) {
+                        ItemUtils.giveOrDropAll(seller, items, true);
                         callback.accept(false, MessageHelper.get("delivery-no-items",
                                 "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."));
                         return;
@@ -298,6 +290,7 @@ public class OrderManager {
                 }
             }, () -> {
                 order.unlockDelivery();
+                ItemUtils.giveOrDropAll(seller, items, true);
                 callback.accept(false, MessageHelper.get("player-retired",
                         "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ."));
             });
@@ -509,6 +502,22 @@ public class OrderManager {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Returns a delivery snapshot to the seller and invokes the failure
+     * callback. Used on every fulfill path that runs before items are extracted
+     * so ConfirmDeliveryGUI's submitted settlement cannot swallow the stacks.
+     */
+    private void failAndReturnItems(Player seller, ItemStack[] items, String msg,
+                                    BiConsumer<Boolean, String> callback) {
+        FoliaScheduler.runAtEntity(seller, () -> {
+            ItemUtils.giveOrDropAll(seller, items, true);
+            callback.accept(false, msg);
+        }, () -> {
+            ItemUtils.giveOrDropAll(seller, items, true);
+            callback.accept(false, msg);
+        });
+    }
 
     /**
      * Merges new delivery items into the existing stash array, filling empty

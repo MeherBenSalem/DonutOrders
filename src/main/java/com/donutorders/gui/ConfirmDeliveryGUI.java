@@ -3,6 +3,7 @@ package com.donutorders.gui;
 import com.donutorders.DonutOrders;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
+import com.donutorders.util.DeliveryItemAccount;
 import com.donutorders.util.DeliveryItemUtils;
 import com.donutorders.util.ItemUtils;
 import com.donutorders.util.MessageHelper;
@@ -12,6 +13,8 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.List;
 
 /**
  * GUI: shows the seller a summary before committing a delivery.
@@ -24,27 +27,18 @@ public class ConfirmDeliveryGUI extends BaseGUI {
 
     private final GUIManager guiManager;
     private final Order order;
-    private final Player seller;
-    private final ItemStack[] items;
+    private final DeliveryItemAccount account;
     private final int deliverCount;
     private final double payout;
-
-    /**
-     * Set to {@code true} the moment {@code fulfillOrder} is dispatched.
-     * Guards {@link #returnItems} against returning the snapshot items
-     * after the transaction has already been submitted to {@code OrderManager}.
-     */
-    private volatile boolean submitted = false;
 
     public ConfirmDeliveryGUI(GUIManager guiManager, Player seller, Order order, ItemStack[] items) {
         super(Bukkit.createInventory(null, 27,
                 MessageHelper.get("gui.confirm-delivery.title", "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ")));
         this.guiManager    = guiManager;
-        this.seller        = seller;
         this.order         = order;
-        this.items         = items;
+        this.account       = new DeliveryItemAccount(items);
         this.deliverCount  = Math.min(
-                DeliveryItemUtils.countAvailable(seller, items, order.getItemTemplate()),
+                DeliveryItemUtils.countAvailable(seller, account.snapshot(), order.getItemTemplate()),
                 order.getAmountRemaining());
         this.payout        = order.getPricePerItem() * deliverCount;
         build();
@@ -77,11 +71,12 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     @Override
     public void handleClick(Player player, int slot, ItemStack clicked, ClickType type) {
         if (slot == SLOT_CONFIRM) {
-            submitted = true;
-            DonutOrders.getInstance().getLogger().info(
-                "[DonutOrders] ConfirmDeliveryGUI submitted by " + player.getName()
+            if (!account.trySubmit()) {
+                return;
+            }
+            log("ConfirmDeliveryGUI submitted by " + player.getName()
                 + " — dispatching fulfillOrder for " + deliverCount + " items.");
-            guiManager.getOrderManager().fulfillOrder(player, order.getOrderId(), items,
+            guiManager.getOrderManager().fulfillOrder(player, order.getOrderId(), account.snapshot(),
                 (success, errorMsg) -> {
                     if (success) {
                         MessageHelper.sendPrefixed(player, "delivery-success",
@@ -103,25 +98,35 @@ public class ConfirmDeliveryGUI extends BaseGUI {
     }
 
     /**
-     * Returns the item snapshot to the player's inventory.
-     * Called on CANCEL click and when the GUI is closed without confirming.
-     * No-op if {@link #submitted} is {@code true}.
+     * Returns the item snapshot to the player's inventory (or {@code deathDrops}
+     * on death). Called on CANCEL, ESC-close, quit, death, and plugin disable.
+     * No-op if the snapshot was already returned or submitted.
      */
     public void returnItems(Player player) {
-        if (submitted) {
-            DonutOrders.getInstance().getLogger().info(
-                "[DonutOrders] ConfirmDeliveryGUI.returnItems skipped for "
-                + player.getName() + " — delivery already submitted.");
+        returnItems(player, null);
+    }
+
+    public void returnItems(Player player, List<ItemStack> deathDrops) {
+        List<ItemStack> toGive = account.takeForReturn();
+        if (toGive.isEmpty()) {
+            log("ConfirmDeliveryGUI.returnItems skipped for "
+                + (player != null ? player.getName() : "unknown")
+                + " — delivery already " + account.state() + ".");
             return;
         }
-        DonutOrders.getInstance().getLogger().info(
-            "[DonutOrders] ConfirmDeliveryGUI.returnItems — returning snapshot to "
-            + player.getName());
-        for (ItemStack item : items) {
-            if (item == null || item.getType() == Material.AIR) continue;
-            var overflow = player.getInventory().addItem(item.clone());
-            overflow.values().forEach(drop ->
-                player.getWorld().dropItemNaturally(player.getLocation(), drop));
+        log("ConfirmDeliveryGUI.returnItems — returning snapshot to "
+            + (player != null ? player.getName() : "unknown"));
+        if (deathDrops != null) {
+            deathDrops.addAll(toGive);
+        } else {
+            ItemUtils.giveOrDropAll(player, toGive);
+        }
+    }
+
+    private static void log(String message) {
+        DonutOrders plugin = DonutOrders.getInstance();
+        if (plugin != null) {
+            plugin.getLogger().info("[DonutOrders] " + message);
         }
     }
 }

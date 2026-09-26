@@ -1,5 +1,6 @@
 package com.donutorders.gui;
 
+import com.donutorders.DonutOrders;
 import com.donutorders.manager.GUIManager;
 import com.donutorders.model.Order;
 import com.donutorders.util.DeliveryItemUtils;
@@ -11,6 +12,9 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * GUI: the seller places items here to fulfill a buy order.
@@ -32,12 +36,13 @@ public class DeliverItemsGUI extends BaseGUI {
     private final Order order;
 
     /**
-     * Set to {@code true} the moment the player clicks CONFIRM.
-     * Prevents {@link #returnItems} from handing items back to the player
-     * after the GUI transition to {@link ConfirmDeliveryGUI} fires
-     * {@code InventoryCloseEvent} and schedules a delayed returnItems call.
+     * OPEN items still belong to this GUI. CONFIRMED means the snapshot was
+     * handed to {@link ConfirmDeliveryGUI}. RETURNED means cancel/close/quit
+     * already gave the live slot contents back.
      */
-    private volatile boolean confirmed = false;
+    private enum Phase { OPEN, CONFIRMED, RETURNED }
+
+    private final AtomicReference<Phase> phase = new AtomicReference<>(Phase.OPEN);
 
     public DeliverItemsGUI(GUIManager guiManager, Order order) {
         super(Bukkit.createInventory(null, 54,
@@ -90,7 +95,9 @@ public class DeliverItemsGUI extends BaseGUI {
     }
 
     private void handleConfirm(Player player) {
-        confirmed = true;
+        if (!phase.compareAndSet(Phase.OPEN, Phase.CONFIRMED)) {
+            return;
+        }
 
         ItemStack[] inputSlots = new ItemStack[INPUT_SLOTS];
         for (int i = 0; i < INPUT_SLOTS; i++) {
@@ -110,7 +117,7 @@ public class DeliverItemsGUI extends BaseGUI {
                 player, inputSlots, order.getItemTemplate());
 
         if (validCount == 0) {
-            confirmed = false;
+            phase.set(Phase.OPEN);
             MessageHelper.send(player, "delivery-no-items",
                 "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ.");
             return;
@@ -125,8 +132,7 @@ public class DeliverItemsGUI extends BaseGUI {
                 clearedCount++;
             }
         }
-        com.donutorders.DonutOrders.getInstance().getLogger().info(
-            "[DonutOrders] DeliverItemsGUI confirmed for " + player.getName()
+        log("DeliverItemsGUI confirmed for " + player.getName()
             + " — cleared " + clearedCount + " GUI slots, snapshot item count: " + validCount);
 
         GUIManager.PlayerGUIState state = guiManager.getState(player.getUniqueId());
@@ -136,25 +142,40 @@ public class DeliverItemsGUI extends BaseGUI {
     }
 
     /**
-     * Returns all items from input slots back to the player.
-     * Called when the player cancels or closes without confirming.
-     * No-op if {@link #handleConfirm} has already been called.
+     * Returns all items from input slots back to the player (or {@code deathDrops}
+     * on death). Called when the player cancels or closes without confirming.
+     * No-op if confirm already transferred the snapshot, or if items were
+     * already returned (cancel + close, quit + close, double-cancel).
      */
     public void returnItems(Player player) {
-        if (confirmed) {
-            com.donutorders.DonutOrders.getInstance().getLogger().info(
-                "[DonutOrders] DeliverItemsGUI.returnItems skipped for " + player.getName()
-                + " — delivery already confirmed.");
+        returnItems(player, null);
+    }
+
+    public void returnItems(Player player, List<ItemStack> deathDrops) {
+        if (!phase.compareAndSet(Phase.OPEN, Phase.RETURNED)) {
+            log("DeliverItemsGUI.returnItems skipped for "
+                + (player != null ? player.getName() : "unknown")
+                + " — delivery already " + phase.get() + ".");
             return;
         }
         for (int i = 0; i < INPUT_SLOTS; i++) {
             ItemStack item = inventory.getItem(i);
-            if (item != null && item.getType() != Material.AIR) {
-                var overflow = player.getInventory().addItem(item);
-                overflow.values().forEach(drop ->
-                    player.getWorld().dropItemNaturally(player.getLocation(), drop));
-                inventory.setItem(i, null);
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
             }
+            inventory.setItem(i, null);
+            if (deathDrops != null) {
+                deathDrops.add(item.clone());
+            } else {
+                ItemUtils.giveOrDrop(player, item);
+            }
+        }
+    }
+
+    private static void log(String message) {
+        DonutOrders plugin = DonutOrders.getInstance();
+        if (plugin != null) {
+            plugin.getLogger().info("[DonutOrders] " + message);
         }
     }
 
@@ -167,9 +188,7 @@ public class DeliverItemsGUI extends BaseGUI {
                 continue;
             }
             if (counted >= needed) {
-                var overflow = player.getInventory().addItem(item);
-                overflow.values().forEach(d ->
-                    player.getWorld().dropItemNaturally(player.getLocation(), d));
+                ItemUtils.giveOrDrop(player, item);
                 inventory.setItem(i, null);
                 snapshot[i] = null;
             } else {
@@ -178,9 +197,7 @@ public class DeliverItemsGUI extends BaseGUI {
                 if (take < item.getAmount()) {
                     ItemStack excess = item.clone();
                     excess.setAmount(item.getAmount() - take);
-                    var overflow = player.getInventory().addItem(excess);
-                    overflow.values().forEach(d ->
-                        player.getWorld().dropItemNaturally(player.getLocation(), d));
+                    ItemUtils.giveOrDrop(player, excess);
                     ItemStack kept = item.clone();
                     kept.setAmount(take);
                     snapshot[i] = kept;

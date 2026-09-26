@@ -6,6 +6,7 @@ import com.donutorders.model.Order;
 import com.donutorders.model.OrderStatus;
 import com.donutorders.scheduler.FoliaScheduler;
 import com.donutorders.storage.StorageManager;
+import com.donutorders.util.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -256,7 +257,10 @@ public class GUIManager {
      */
     public void openConfirmDelivery(Player player, UUID orderId, ItemStack[] items) {
         Order order = storage.getOrder(orderId);
-        if (order == null) return;
+        if (order == null) {
+            FoliaScheduler.runAtEntity(player, () -> ItemUtils.giveOrDropAll(player, items, true), null);
+            return;
+        }
 
         FoliaScheduler.runAtEntity(player, () -> {
             ConfirmDeliveryGUI gui = new ConfirmDeliveryGUI(this, player, order, items);
@@ -330,6 +334,32 @@ public class GUIManager {
     /** Removes GUI state for a player (called on inventory close / quit). */
     public void clearState(UUID playerUUID) {
         states.remove(playerUUID);
+    }
+
+    /**
+     * Returns items held in an open delivery or confirm-delivery GUI exactly
+     * once. Safe to call from cancel, close, quit, death, and disable.
+     *
+     * @param deathDrops when non-null, stacks are added there instead of the
+     *                   live inventory (player is dying without keepInventory)
+     */
+    public void returnHeldDeliveryItems(Player player) {
+        returnHeldDeliveryItems(player, null);
+    }
+
+    public void returnHeldDeliveryItems(Player player, java.util.List<ItemStack> deathDrops) {
+        if (player == null) {
+            return;
+        }
+        PlayerGUIState state = states.get(player.getUniqueId());
+        if (state == null || state.gui == null) {
+            return;
+        }
+        if (state.gui instanceof DeliverItemsGUI deliverGUI) {
+            deliverGUI.returnItems(player, deathDrops);
+        } else if (state.gui instanceof ConfirmDeliveryGUI confirmGUI) {
+            confirmGUI.returnItems(player, deathDrops);
+        }
     }
 
     /**
