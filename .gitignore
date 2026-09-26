@@ -35,7 +35,8 @@ Desktop.ini
 # Built artifacts
 *.jar
 !**/maven-wrapper.jar
-releases/
+# publish.yml looks here first; keep versioned plugin jars tracked
+!releases/*.jar
 dist/
 
 # Local AI / graph tools
