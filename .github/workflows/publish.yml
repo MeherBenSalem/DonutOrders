@@ -77,7 +77,7 @@ jobs:
             printf '%s\n' "${JARS[@]}"
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "No releases/*-${VERSION}.jar — will attempt Gradle build"
+            echo "No releases/*-${VERSION}.jar — will attempt Maven or Gradle build"
           fi
 
       - uses: actions/setup-java@v4
@@ -86,11 +86,40 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Build Maven plugin
         if: steps.prebuilt.outputs.found != 'true'
+        id: maven
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.ver.outputs.version }}"
+          if [ ! -f pom.xml ]; then
+            echo "built=false" >> "$GITHUB_OUTPUT"
+            echo "No pom.xml — skip Maven"
+            exit 0
+          fi
+          mvn -B package
+          mkdir -p releases
+          copied=0
+          shopt -s nullglob
+          for j in target/*-"${VERSION}".jar; do
+            case "$j" in
+              *-sources.jar|*-javadoc.jar|*/original-*) continue ;;
+            esac
+            cp -v "$j" releases/
+            copied=1
+          done
+          if [ "$copied" -eq 0 ]; then
+            echo "Maven package produced no target/*-${VERSION}.jar" >&2
+            exit 1
+          fi
+          echo "built=true" >> "$GITHUB_OUTPUT"
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.prebuilt.outputs.found != 'true' && steps.maven.outputs.built != 'true'
 
       - name: Build MultiLoader workspaces
-        if: steps.prebuilt.outputs.found != 'true'
+        if: steps.prebuilt.outputs.found != 'true' && steps.maven.outputs.built != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -126,6 +155,11 @@ jobs:
         run: |
           VERSION="${{ steps.ver.outputs.version }}"
           mapfile -t JARS < <(find releases -maxdepth 1 -type f -name "*-${VERSION}.jar" 2>/dev/null | sort)
+          if [ ${#JARS[@]} -eq 0 ]; then
+            mapfile -t JARS < <(find target -maxdepth 1 -type f -name "*-${VERSION}.jar" \
+              ! -name "*-sources.jar" ! -name "*-javadoc.jar" \
+              ! -name "original-*" 2>/dev/null | sort)
+          fi
           if [ ${#JARS[@]} -eq 0 ]; then
             mapfile -t JARS < <(find . -type f -path "*/build/libs/*-${VERSION}.jar" \
               ! -name "*-sources.jar" ! -name "*-javadoc.jar" \
