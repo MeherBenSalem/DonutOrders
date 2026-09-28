@@ -84,7 +84,7 @@ jobs:
         if: steps.prebuilt.outputs.found != 'true'
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Build Maven plugin
         if: steps.prebuilt.outputs.found != 'true'
