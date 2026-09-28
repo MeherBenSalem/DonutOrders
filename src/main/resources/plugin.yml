@@ -1,6 +1,7 @@
 name: DonutOrders
 version: '${project.version}'
 main: com.donutorders.DonutOrders
+# Minimum API version. Keep 1.20 so 1.20.x servers still load; 26.3 accepts this.
 api-version: '1.20'
 description: Player-driven buy-order marketplace.
 author: NightBeam

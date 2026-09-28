@@ -3,7 +3,7 @@
 ## Supported versions
 
 Security fixes are generally applied to the latest release line of DonutOrders
-for Bukkit / Spigot / Paper / Purpur / Folia on Minecraft **1.20.1 through 26.2**.
+for Bukkit / Spigot / Paper / Purpur / Folia on Minecraft **1.20.1 through 26.3**.
 
 Older releases may not receive backports.
 
