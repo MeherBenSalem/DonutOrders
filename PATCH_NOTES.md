@@ -4,7 +4,7 @@
 
 - Added Minecraft **26.3** support (Paper / Folia / Spigot / Purpur); existing 1.20.6, 1.21.x, 26.1.x, and 26.2 support is unchanged
 - Compiled against Paper API `26.3.build.49-alpha` (latest published 26.3 API jar); `plugin.yml` `api-version` stays `1.20` so older servers still load
-- Tested against Paper 26.3 build #133 (ALPHA), Paper 26.2, and Paper 1.20.6
+- Tested against Paper 26.3 build #133 (ALPHA), Paper 26.2 build #129, and Paper 1.20.6 build #151
 
 ## 1.9.1
 
