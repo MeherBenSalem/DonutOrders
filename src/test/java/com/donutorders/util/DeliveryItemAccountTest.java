@@ -3,6 +3,8 @@ package com.donutorders.util;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -152,8 +154,17 @@ class DeliveryItemAccountTest {
         return total;
     }
 
+    /**
+     * Paper 26.3 {@code new ItemStack(Material, int)} needs a live
+     * {@code RegistryAccess} implementation, which unit tests do not start.
+     * A mock is enough: the account only reads type/amount and clones.
+     */
     private static ItemStack stack(Material material, int amount) {
-        return new ItemStack(material, amount);
+        ItemStack item = mock(ItemStack.class);
+        when(item.getType()).thenReturn(material);
+        when(item.getAmount()).thenReturn(amount);
+        when(item.clone()).thenAnswer(invocation -> stack(material, amount));
+        return item;
     }
 
     private static int count(Iterable<ItemStack> items) {

@@ -12,7 +12,7 @@ Thanks for helping improve DonutOrders.
 
 ## Development
 
-- Java 17+
+- Java 17+ to run; **JDK 25+** to compile (Paper 26.3 API)
 - Build: `mvn -B package`
 - Tests: `mvn -B test`
 - Plugin entry point: `src/main/resources/plugin.yml`

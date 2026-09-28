@@ -18,7 +18,7 @@ Players post buy orders; others fulfill them for payment via Vault.
 ## Requirements
 
 - Java 17+
-- Minecraft **1.20.1 through 26.2** (including 1.21.x and 26.1.x)
+- Minecraft **1.20.1 through 26.3** (including 1.21.x, 26.1.x, and 26.2)
 - Software: **Bukkit, Spigot, Paper, Purpur, or Folia**
 - Vault + a Vault-compatible economy plugin
 
@@ -35,6 +35,9 @@ Players post buy orders; others fulfill them for payment via Vault.
 - `/orders admin reload` — reload config and messages (admin)
 
 ## Building
+
+Building requires **JDK 25+** (Paper 26.3 API class files). The shaded jar still
+targets Java 17 and runs on Java 17+ servers.
 
 ```bash
 mvn -B package
