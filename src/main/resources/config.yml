@@ -1,39 +1,17 @@
-# ─────────────────────────────────────────────────────────────────────────────
-#  DonutOrders  –  config.yml
-# ─────────────────────────────────────────────────────────────────────────────
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │  DonutOrders 2 · config.yml                                              │
+# │  Every text players see is in messages.yml. /orderadmin reload applies   │
+# │  changes. New settings are added here on update; yours are kept.         │
+# └──────────────────────────────────────────────────────────────────────────┘
 
-update-check:
-  # Check Modrinth for a newer release when the plugin starts.
-  enabled: true
-  # Notify players with donutorders.admin when they join if an update was found.
-  notify-ops-on-join: true
+# Do not change: used to carry settings over between versions.
+config-version: 2
 
-orders:
-  # Default maximum simultaneous active orders (no rank/permission override).
-  default-limit: 2
-
-  # Legacy alias — kept in sync with default-limit for older configs.
-  max-per-player: 2
-
-  # How many days an order lives before it expires and is refunded.
-  default-expiry-days: 7
-
-  # Percentage tax taken from each payout to the seller.
-  # Set to 0 to disable.  Tax is silently discarded (economy sink).
-  tax-percent: 0.0
-
-  # Announce new buy orders in chat to all online players except the creator.
-  # The creator still gets the private order-created confirmation.
-  broadcast-on-create: true
-
-database:
-  # Storage backend: sqlite (default, single-server) or mysql (shared DB for cross-server).
-  type: sqlite
-
-  # SQLite only — filename relative to the plugin data folder.
-  filename: donutorders.db
-
-  # MySQL only — all servers in a network should point at the same database.
+storage:
+  # SQLITE (one server) or MYSQL (MariaDB works too). Servers sharing a MySQL database share one order book.
+  type: SQLITE
+  sqlite:
+    file: donutorders.db
   mysql:
     host: localhost
     port: 3306
@@ -41,18 +19,238 @@ database:
     username: donutorders
     password: ""
     pool-size: 10
+    parameters: "useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8"
 
-  # MySQL cross-server sync: poll remote changes into the in-memory cache (seconds).
-  sync-interval-seconds: 5
+sync:
+  # MySQL only: how often (seconds) a server reads the changes other servers made.
+  poll-seconds: 3
+  # Optional: Redis tells the other servers at once (orders and notifications). Orders stay safe without it.
+  redis:
+    enabled: false
+    host: localhost
+    port: 6379
+    password: ""
+    channel: "donutorders:sync"
 
-gui:
-  # How many order entries to show per page on the public orders GUI.
-  orders-per-page: 45
+orders:
+  # Price per single item. Players can type 2.5k, 1m or 3b.
+  min-price: 0.01
+  max-price: 1000000000
+  # The most items one order can ask for (donutorders.bypass.amount ignores it).
+  max-amount: 100000
+  # The most one order can be worth (amount × price).
+  max-total: 1000000000000
+  # Per-item price limits (per single item). Keys are material names, or full item keys for books:
+  #   DIAMOND: {min: 50, max: 5000}
+  #   "ENCHANTED_BOOK:minecraft:mending:1": {min: 1000}
+  price-limits: {}
+  # Seconds between two new orders of one player (donutorders.bypass.cooldown ignores it).
+  cooldown-seconds: 0
+  # Let players deliver to their own orders. Off: nobody can farm fees or stats with themselves.
+  allow-self-delivery: false
+  # Let owners lower the price of an open order (the difference is refunded).
+  allow-price-decrease: true
+  # How often (seconds) ended orders are closed and refunded.
+  expiry-check-seconds: 20
 
-# Per-rank active order limits (LuckPerms group.<rank> permission).
-# Highest matching rank wins. Override with donutorders.limit.<n> permissions.
-rank-limits:
-  default: 2
-  vip: 5
+limits:
+  # Open orders a player may have. donutorders.limit.<number> raises it; donutorders.limit.unlimited removes it.
+  default: 18
+  # More by permission (the highest one a player has wins; -1 is unlimited). LuckPerms groups work as group.<name>:
+  permissions:
+    donutorders.limit.vip: 45
+    group.mvp: 90
 
-# Allowed order materials are configured in items.yml.
+durations:
+  # The choices in the new-order menu (m, h, d, w). Longer than a player's maximum are hidden.
+  options: [1h, 12h, 1d, 3d, 7d, 14d, 30d]
+  default: 7d
+  min: 1h
+  max: 30d
+  # A longer maximum by permission:
+  permissions:
+    donutorders.duration.long: 90d
+
+economy:
+  # A fee the buyer pays when creating an order, shown before they confirm.
+  creation-fee:
+    enabled: false
+    flat: 0
+    percent: 0
+    # Cap (0 is no cap).
+    max: 0
+    # Give the fee back when the owner cancels before anything was delivered.
+    refund-on-cancel: false
+    exempt-permission: donutorders.fee.exempt
+  # A share of every payout, taken from the seller.
+  seller-tax:
+    enabled: false
+    percent: 5
+    # Lower rates by permission (the lowest one a player has wins):
+    permissions:
+      donutorders.tax.vip: 2.5
+  # Where fees and tax go: a player name or UUID (a server bank account), or empty to remove them from the economy.
+  deposit-to: ""
+
+matching:
+  # What counts as "a diamond sword" for a plain order. Exact orders (made by holding an item) compare the whole item.
+  accept-renamed: false
+  # Tools and armor that are worn.
+  accept-damaged: false
+  # Enchanted tools and armor (the buyer gets the enchantments for free).
+  accept-enchanted: true
+  # Items carrying custom model data, plugin data or lore are never sold as the plain item, unless this is on.
+  accept-custom-items: false
+  # Turn on if another plugin adds lore to every item (worth or sell-price lines), so those still count as plain.
+  ignore-lore: false
+  # Plugin data that does not make an item custom ("namespace:key", or "namespace:*").
+  ignored-plugin-data: []
+  # Plugin data holding a custom item's id (Nexo, Oraxen, ...): exact orders for such items match by this id.
+  custom-item-ids: ["nexo:id", "oraxen:id"]
+  books:
+    # A Sharpness III order also takes Sharpness IV and V.
+    accept-higher-levels: false
+    # A Sharpness III order also takes books with other enchantments on them.
+    accept-extra-enchantments: false
+
+delivery:
+  # Take matching items out of filled shulker boxes (the box and the rest go back).
+  unpack-shulker-boxes: true
+  # Open the board again after delivering.
+  reopen-board: true
+
+sell:
+  # Ask before /orders sell and the board's sell button sell anything.
+  confirm: true
+
+restrictions:
+  # Worlds where orders cannot be created or delivered to.
+  disabled-worlds: []
+  blocked-gamemodes: [CREATIVE, SPECTATOR]
+
+# Items that can never be ordered. Wildcards: *_SPAWN_EGG, SHULKER_* or *SWORD*.
+blacklist:
+  materials: [BEDROCK, BARRIER, COMMAND_BLOCK, CHAIN_COMMAND_BLOCK, REPEATING_COMMAND_BLOCK, COMMAND_BLOCK_MINECART, STRUCTURE_BLOCK,
+              STRUCTURE_VOID, JIGSAW, LIGHT, DEBUG_STICK, KNOWLEDGE_BOOK, END_PORTAL_FRAME, TRIAL_SPAWNER, VAULT,
+              REINFORCED_DEEPSLATE, BUDDING_AMETHYST, PETRIFIED_OAK_SLAB, "*_SPAWN_EGG", TEST_BLOCK, TEST_INSTANCE_BLOCK]
+  name-contains: []
+  lore-contains: []
+  custom-model-data: []
+  plugin-data: []
+
+# Only these items can be ordered, when enabled (1.x item lists are carried over here).
+whitelist:
+  enabled: false
+  materials: []
+
+catalog:
+  # Shown first in the new-order item picker.
+  featured: [DIAMOND, NETHERITE_INGOT, NETHERITE_SCRAP, EMERALD, GOLD_INGOT, IRON_INGOT, ANCIENT_DEBRIS, OBSIDIAN, ENDER_PEARL,
+             BLAZE_ROD, SHULKER_SHELL, ELYTRA, TOTEM_OF_UNDYING, NETHER_STAR, GOLDEN_CARROT, EXPERIENCE_BOTTLE, SLIME_BALL,
+             GUNPOWDER, BONE, STRING, OAK_LOG, SPRUCE_LOG, COBBLESTONE, STONE, SAND, GLASS, WHEAT, SUGAR_CANE]
+  # Enchantments that cannot be ordered as books ("minecraft:binding_curse").
+  blocked-enchantments: []
+
+insight:
+  # Days of deliveries used for averages.
+  days: 7
+  # Warn in the new-order menu when the price is this much above the average (200 = three times the average).
+  overpay-warning-percent: 200
+  # "Outbid" adds this to the best open price (0: one percent, at least one cent).
+  outbid-step: 0
+
+price-display:
+  # Show 1.2k and 3.5M instead of full amounts in menus and messages. Money is still settled to the cent.
+  compact:
+    enabled: false
+    precision: 1
+    thousand-suffix: "k"
+    million-suffix: "M"
+    # %amount%, %suffix% and %currency% (the economy's currency name).
+    template: "%amount%%suffix% %currency%"
+  locale: en-US
+
+notifications:
+  # Deliveries to one order within these seconds are reported as one message.
+  batch-seconds: 3
+  # Delivery alerts: chat, actionbar, both or none.
+  delivery-alert: chat
+  title-on-filled: true
+  # Seconds after joining before the "while you were away" summary.
+  join-delay-seconds: 3
+  remind-waiting-items: true
+
+broadcast:
+  # Announce new orders to everyone (clickable). Players can mute it with /order alerts.
+  enabled: true
+  # Only orders worth at least this much.
+  min-total: 0
+  # Seconds between two announcements of one player's orders.
+  cooldown-seconds: 30
+
+anti-abuse:
+  # Deliveries between two players on the same address: off, alert (staff and Discord) or block.
+  same-address: alert
+
+market:
+  # Close the market for everyone without donutorders.bypass.restrictions (also /orderadmin freeze).
+  frozen: false
+
+history:
+  # Finished orders and old deliveries are removed after this many days (0 keeps them forever).
+  keep-days: 60
+
+menus:
+  # The board's first sort: MONEY_PER_ITEM, RECENTLY_LISTED, MOST_DELIVERED, MOST_PAID or ENDING_SOON.
+  default-sort: MONEY_PER_ITEM
+  # Change any button's item and resource-pack model, for example:
+  #   deliver: {material: LIME_STAINED_GLASS_PANE, model: 1001}
+  # Buttons: previous, next, back, close, sort, category, search, my-orders, deliverable, sell, refresh, filler, empty,
+  # fill, deliver, confirm, cancel, new-order, collect-all, mailbox, alerts, board, history, amount, amount-up,
+  # amount-down, price, price-up, price-down, outbid, average, insight, duration, duration-selected, cancel-order, stats.
+  buttons: {}
+
+style:
+  # Small capitals in menu titles and button names, as on the big SMP servers.
+  small-caps: true
+
+# Sounds by key ("minecraft:ui.button.click", optionally ":volume:pitch"); "none" turns one off.
+sounds:
+  enabled: true
+  click: "minecraft:ui.button.click:0.4:1.4"
+  success: "minecraft:entity.experience_orb.pickup:0.7:1.2"
+  error: "minecraft:block.note_block.bass:0.7:0.6"
+  delivered: "minecraft:entity.player.levelup:0.5:1.6"
+  delivery-received: "minecraft:block.note_block.chime:0.7:1.4"
+  order-filled: "minecraft:ui.toast.challenge_complete:0.6:1.0"
+  collect: "minecraft:entity.item.pickup:0.8:1.0"
+
+discord:
+  enabled: false
+  webhook-url: ""
+  # CREATED, DELIVERED, FILLED, CANCELLED, EXPIRED, SUSPICIOUS
+  events: [CREATED, FILLED, SUSPICIOUS]
+  # Only posts about this much money or more (suspicious deliveries are always posted).
+  min-value: 0
+  username: "Buy Orders"
+  avatar-url: ""
+  footer: "DonutOrders"
+  head-url: "https://mc-heads.net/avatar/{uuid}/64"
+  item-icon-url: ""
+
+transaction-log:
+  # One line per order event in plugins/DonutOrders/logs/transactions-YYYY-MM-DD.log.
+  enabled: true
+
+placeholderapi:
+  enabled: true
+
+metrics:
+  # Anonymous statistics on bstats.org.
+  enabled: true
+
+update-checker:
+  enabled: true
+  check-interval-hours: 12
+  notify-console: true
+  notify-admins: true

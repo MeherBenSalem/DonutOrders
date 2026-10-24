@@ -1,5 +1,25 @@
 # Patch notes
 
+## 2.0.0: The Supply Update
+
+A full rebuild. See [DonutOrders-2.0.0-PatchNotes.md](DonutOrders-2.0.0-PatchNotes.md) for everything.
+
+- **Paper, Folia and Purpur, 1.20.1 to 26.3**, tested on 14 real servers and on two servers sharing one MySQL database.
+  Plain Spigot is no longer supported.
+- **Safe by design**: every delivery, cancel, expiry and edit is a conditional database update, and money moves only
+  after it. Items in transit are tracked until they are delivered or handed back.
+- **Board**: four SMP sorts plus ending soon, categories, search, a "what I can deliver" filter, quick deliver, and
+  shulker unpacking.
+- **`/orders sell`**: sell everything into the best orders.
+- **New orders**: an item picker, "order the item in your hand", a book picker, k/m/b prices, durations, price insight
+  and an overpay warning.
+- **Your orders**: collect, change (amount, price, time), cancel, mailbox and history.
+- **Notifications**: batched alerts, a title when an order fills, a join summary, cross-server delivery.
+- **Rules and economy**: fees, tax tiers, price, amount and total caps, limits, durations, a blacklist and whitelist,
+  matching rules, same-address alerts, server orders, and staff tools.
+- **Integrations**: Discord, PlaceholderAPI, an API with sell routing, and Redis.
+- **Upgrading**: 1.x orders, stash items and settings are carried over once.
+
 ## 1.9.2
 
 - Added Minecraft **26.3** support (Paper / Folia / Spigot / Purpur); existing 1.20.6, 1.21.x, 26.1.x, and 26.2 support is unchanged

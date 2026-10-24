@@ -1,0 +1,5 @@
+[DonutOrders] Moved the 1.x configuration to legacy-1.x/ and carried its settings into the new config.yml (limits, rank limits, expiry, tax, broadcast, database, update check).
+[DonutOrders] Your 1.x item list (4 items) is kept as whitelist.materials. Set whitelist.enabled to false in config.yml to allow every item.
+[DonutOrders] Economy linked via Vault v1.7.3-b131 using provider OrderLabEconomy.
+[DonutOrders] Imported 3 orders and 2 stored stacks from DonutOrders 1.x. The 1.x tables were left untouched.
+[DonutOrders] DonutOrders ready: open orders 1, SQLITE storage, economy via Vault v1.7.3-b131.

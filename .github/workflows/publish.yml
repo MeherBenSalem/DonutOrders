@@ -219,16 +219,18 @@ jobs:
           if (!jars.length) throw new Error('No jars to upload');
 
           function resolveChangelog(ver) {
-            const candidates = [
-              `CHANGELOG.md`,
-              `PATCH_NOTES.md`,
-              ...fs.readdirSync('.').filter((f) =>
-                f.toLowerCase().endsWith(`-${ver}-patchnotes.md`) ||
-                f.toLowerCase() === `${ver}-patchnotes.md`
-              ),
-            ];
-            for (const f of candidates) {
-              if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8');
+            // The release's own notes first (DonutOrders-<ver>-PatchNotes.md), then its section of PATCH_NOTES.md.
+            const named = fs.readdirSync('.').filter((f) =>
+              f.toLowerCase().endsWith(`-${ver}-patchnotes.md`) || f.toLowerCase() === `${ver}-patchnotes.md`);
+            for (const f of named) return fs.readFileSync(f, 'utf8');
+            for (const f of ['CHANGELOG.md', 'PATCH_NOTES.md']) {
+              if (!fs.existsSync(f)) continue;
+              const lines = fs.readFileSync(f, 'utf8').split(/\r?\n/);
+              const start = lines.findIndex((line) => line.trim() === `## ${ver}` || line.trim().startsWith(`## ${ver} `));
+              if (start < 0) continue;
+              const rest = lines.slice(start + 1);
+              const end = rest.findIndex((line) => /^##\s/.test(line.trim()));
+              return (end < 0 ? rest : rest.slice(0, end)).join('\n').trim();
             }
             return `Release ${ver}`;
           }
@@ -267,8 +269,13 @@ jobs:
             return { loader, gv, isPlugin };
           }
 
-          const PLUGIN_LOADERS = ['bukkit', 'spigot', 'paper', 'purpur', 'folia'];
-          const PLUGIN_GAME_VERSIONS = [
+          // Loaders and Minecraft versions come from release/supported-minecraft.json when it has them.
+          const support = fs.existsSync('release/supported-minecraft.json')
+            ? JSON.parse(fs.readFileSync('release/supported-minecraft.json', 'utf8')) : null;
+          const PLUGIN_LOADERS = support && !Array.isArray(support) && Array.isArray(support.loaders)
+            ? support.loaders : ['bukkit', 'spigot', 'paper', 'purpur', 'folia'];
+          const PLUGIN_GAME_VERSIONS = Array.isArray(support) ? support
+            : support && Array.isArray(support.game_versions) ? support.game_versions : [
             '1.20.1', '1.20.2', '1.20.3', '1.20.4', '1.20.5', '1.20.6',
             '1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4', '1.21.5', '1.21.6',
             '1.21.7', '1.21.8', '1.21.9', '1.21.10', '1.21.11',

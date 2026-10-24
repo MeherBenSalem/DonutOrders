@@ -46,3 +46,8 @@ graphify-out/
 .env
 .env.*
 !.env.example
+
+# Smoke matrix and marketing tooling
+node_modules/
+marketing/source/.render-*.html
+__pycache__/

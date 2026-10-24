@@ -1,316 +1,401 @@
-# ─────────────────────────────────────────────────────────────────────────────
-#  DonutOrders  –  messages.yml
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │  DonutOrders 2 · messages.yml                                            │
+# │  Every text players see. /orderadmin reload applies changes.             │
+# └──────────────────────────────────────────────────────────────────────────┘
 #
-#  Edit this file to translate the entire plugin into your language.
-#  No recompile needed — run:  /orderadmin reload
-#
-#  Formatting:
-#    &0–&f, &k–&o, &l, &m, &n, &r   standard Minecraft color/format codes
-#    #RRGGBB                         hex colors (Paper/Folia)
-#
-#  Placeholders (depend on the key):
-#    {0} {1} {2} …                   positional
-#    {item} {buyer} {price} …        named (GUI lore)
-#
-#  Inventory titles should stay short (ideally under ~32 characters).
-# ─────────────────────────────────────────────────────────────────────────────
+# Formatting: MiniMessage (<gold>, <#49d6a0>, <gradient:#49d6a0:#ffc24b>text</gradient>, <b>), legacy & codes and
+# &#RRGGBB hex, mixed freely. %placeholders% are filled in by the plugin; player-made text (names, searches) can never
+# add formatting. Menu titles and button names are written in small capitals when style.small-caps is on.
+# Missing keys fall back to the built-in English text, so this file can be trimmed to what you change.
 
-# ── General ───────────────────────────────────────────────────────────────────
-prefix: "&8[&b&lᴅᴏɴᴜᴛ&f&lᴏʀᴅᴇʀꜱ&8] &r"
-no-permission: "&cʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴅᴏ ᴛʜᴀᴛ."
-player-only: "&cᴏɴʟʏ ᴘʟᴀʏᴇʀꜱ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ."
-player-not-found: "&cᴘʟᴀʏᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ: &f{player}"
+# ─── Put in front of chat messages. ────────────────────────────────────────
+prefix: "<#49d6a0><b>Orders</b> <dark_gray>» <reset>"
 
+# ─── General ───────────────────────────────────────────────────────────────
+general:
+  busy: "&cPlease wait a moment."
+  no-permission: "&cYou do not have permission to do that."
+  not-yours: "&cThat is not your order."
+  players-only: "&cOnly players can use this."
+  server-name: "Server"
+  starting: "&eDonutOrders is still starting. Try again in a moment."
+
+# ─── Commands ──────────────────────────────────────────────────────────────
 command:
-  order:
-    usage: "&cᴜꜱᴀɢᴇ: /order [history]"
-  orders:
-    usage: "&cᴜꜱᴀɢᴇ: /orders"
-  orderadmin:
-    usage: "&cᴜꜱᴀɢᴇ: /orderadmin <reload|history|simulate> [player]"
-    history-usage: "&cᴜꜱᴀɢᴇ: /orderadmin history <player>"
-config-reloaded: "&aᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ ʀᴇʟᴏᴀᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ."
-plugin-starting: "&eᴅᴏɴᴜᴛᴏʀᴅᴇʀꜱ ɪꜱ ꜱᴛɪʟʟ ꜱᴛᴀʀᴛɪɴɢ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ ɪɴ ᴀ ᴍᴏᴍᴇɴᴛ."
-update-available: "&e[DonutOrders] &7Update available: &f{0} &7— &b{1}"
+  create-usage: "&cUsage: /order create <item|hand> <amount> <price> [time]"
+  invalid-duration: "&cUse a time like 12h, 3d or 1w."
+  order-usage: "&cUsage: /order [new|create|collect|mailbox|history|alerts|cancel]"
+  unknown-item: "&cUnknown item: %item%"
+  unknown-order: "&cNo order of yours has that id. The id is shown in &e/order&c."
+  view-usage: "&cUsage: /orders view <player>"
 
-# Keyword players type in chat to cancel amount/price input (case-insensitive)
-chat-cancel-keyword: "cancel"
+# ─── /orders help ──────────────────────────────────────────────────────────
+help:
+  board: "&d/orders &7- browse open orders and deliver"
+  create: "&d/order create <item|hand> <amount> <price> [time] &7- create without menus"
+  mine: "&d/order &7- your orders: create, collect, change, cancel"
+  price: "&d/orders price &7- what the held item sells for"
+  search: "&d/orders <search> &7- find orders by item, enchantment or player"
+  sell: "&d/orders sell [all] &7- sell your held item (or everything) to the best orders"
+  view: "&d/orders view <player> &7- a player's open orders"
 
-# ── Chat / order creation ─────────────────────────────────────────────────────
-chat-prompt-amount: "&eᴇɴᴛᴇʀ ᴛʜᴇ ᴀᴍᴏᴜɴᴛ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙᴜʏ (ᴏʀ &c{0}&e):"
-chat-prompt-price: "&eᴇɴᴛᴇʀ ᴘʀɪᴄᴇ ᴘᴇʀ ɪᴛᴇᴍ (ᴏʀ &c{0}&e):"
-chat-input-cancelled: "&7ɪɴᴘᴜᴛ ᴄᴀɴᴄᴇʟʟᴇᴅ."
-chat-input-invalid-number: "&cɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ᴡʜᴏʟᴇ ɴᴜᴍʙᴇʀ."
-chat-input-invalid-price: "&cɪɴᴠᴀʟɪᴅ ᴘʀɪᴄᴇ. ᴘʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴀ ᴘᴏꜱɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ."
-chat-input-timeout: "&7ᴄʜᴀᴛ ɪɴᴘᴜᴛ ᴛɪᴍᴇᴅ ᴏᴜᴛ."
+# ─── Questions asked in chat ───────────────────────────────────────────────
+input:
+  add-amount: "&eType how many items to add in chat, or &6%cancel% &eto go back."
+  amount: "&eType the amount you want in chat, or &6%cancel% &eto go back."
+  cancel-word: "cancel"
+  cancelled: "&7Cancelled."
+  catalog-search: "&eType part of an item name in chat, or &6%cancel% &eto go back."
+  invalid-amount: "&cType a whole number from 1 to %max%."
+  invalid-price: "&cThat is not a price."
+  price: "&eType the price per item in chat (2.5k and 1m work), or &6%cancel% &eto go back."
+  search: "&eType what you are looking for in chat, or &6%cancel% &eto go back."
+  timeout: "&7No answer, so nothing was changed."
 
-# ── Order messages ────────────────────────────────────────────────────────────
-order-created: "&aᴏʀᴅᴇʀ ᴄʀᴇᴀᴛᴇᴅ! &f{0} &7× {1} &7@ &f{2} &7ᴇᴀᴄʜ &8(&f{3} &7ᴡɪᴛʜᴅʀᴀᴡɴ&8)"
-# Public chat announce. {0}=buyer {1}=item {2}=amount {3}=price per item
-order-created-broadcast: "&e{0} &7created a buy order: &f{1} &7× {2} &7@ &f{3} &7each"
-max-orders-reached: "&cʏᴏᴜ ʜᴀᴠᴇ ʀᴇᴀᴄʜᴇᴅ ᴛʜᴇ ᴍᴀxɪᴍᴜᴍ ɴᴜᴍʙᴇʀ ᴏꜰ ᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ ({0})."
-insufficient-funds: "&cɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜰᴜɴᴅꜱ. ʏᴏᴜ ɴᴇᴇᴅ &f{0}&c ʙᴜᴛ ᴏɴʟʏ ʜᴀᴠᴇ &f{1}&c."
-order-create-failed: "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴏʀᴅᴇʀ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."
-item-not-allowed: "&cᴛʜᴀᴛ ɪᴛᴇᴍ ɪꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ ꜰᴏʀ ᴏʀᴅᴇʀꜱ."
-order-cancelled: "&aᴏʀᴅᴇʀ ᴄᴀɴᴄᴇʟʟᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ."
-order-cancel-failed: "&cꜰᴀɪʟᴇᴅ ᴛᴏ ᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ."
-order-not-found: "&cᴏʀᴅᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ."
-order-not-yours: "&cᴛʜᴀᴛ ᴏʀᴅᴇʀ ᴅᴏᴇꜱ ɴᴏᴛ ʙᴇʟᴏɴɢ ᴛᴏ ʏᴏᴜ."
-order-expired: "&7ʏᴏᴜʀ ᴏʀᴅᴇʀ ʜᴀꜱ ᴇxᴘɪʀᴇᴅ. &f{0} &7ʀᴇꜰᴜɴᴅᴇᴅ (ᴄᴏʟʟᴇᴄᴛ ɪᴛᴇᴍꜱ ꜰʀᴏᴍ &e/ᴏʀᴅᴇʀꜱ&7)."
-order-no-longer-active: "&cᴏʀᴅᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴄᴛɪᴠᴇ."
-player-retired: "&cᴘʟᴀʏᴇʀ ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴠᴀɪʟᴀʙʟᴇ."
+# ─── Creating orders ───────────────────────────────────────────────────────
+create:
+  amount-range: "&cThe amount must be between 1 and %max%."
+  cancelled: "&cThat order cannot be created."
+  cannot-afford: "&cThis order costs %cost% and you have %balance%."
+  created: "&aOrder created: &f%amount%× %item% &afor &6%price% &aeach. &7%cost% is held until it is delivered."
+  duration-range: "&cPick a duration between %min% and %max%."
+  failed: "&cThe order could not be saved. Your money was refunded."
+  limit: "&cYou already have %limit% open orders."
+  no-exact: "&cYou can only order plain items and enchanted books."
+  price-range: "&cThe price per item must be between %min% and %max%."
+  total-too-high: "&cAn order may be worth at most %max%."
 
-# ── Delivery messages ─────────────────────────────────────────────────────────
-delivery-success: "&aᴅᴇʟɪᴠᴇʀᴇᴅ &f{0}× {1}&a. ʏᴏᴜ ᴇᴀʀɴᴇᴅ &f{2}&a."
-delivery-no-items: "&cʏᴏᴜ ʜᴀᴠᴇ ɴᴏ ᴠᴀʟɪᴅ ɪᴛᴇᴍꜱ ᴛᴏ ᴅᴇʟɪᴠᴇʀ."
-delivery-wrong-item: "&cᴡʀᴏɴɢ ɪᴛᴇᴍ ᴛʏᴘᴇ — ᴛʜɪꜱ ᴏʀᴅᴇʀ ᴡᴀɴᴛꜱ &f{0}&c."
-delivery-order-full: "&cᴛʜɪꜱ ᴏʀᴅᴇʀ ɪꜱ ᴀʟʀᴇᴀᴅʏ ꜰᴜʟꜰɪʟʟᴇᴅ."
-delivery-failed: "&cᴅᴇʟɪᴠᴇʀʏ ꜰᴀɪʟᴇᴅ. ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ."
-delivery-own-order: "&cʏᴏᴜ ᴄᴀɴɴᴏᴛ ꜰᴜʟꜰɪʟʟ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀ."
-delivery-in-progress: "&cᴅᴇʟɪᴠᴇʀʏ ᴀʟʀᴇᴀᴅʏ ɪɴ ᴘʀᴏɢʀᴇꜱꜱ."
+# ─── Delivering ────────────────────────────────────────────────────────────
+deliver:
+  busy: "&cThat order is busy. Try again."
+  cancelled: "&cThat delivery was refused."
+  closed: "&cThat order is no longer taking deliveries."
+  delivered: "&aDelivered &f%amount%× %item% &ato %owner%'s order for &6%paid%&a.%tax%"
+  failed: "&cThe delivery could not be saved. Your items were returned."
+  full: "&cSomeone else filled that order first."
+  nothing-matches: "&cYou have nothing this order wants."
+  own-order: "&cYou cannot deliver to your own order."
+  same-address: "&cYou cannot deliver to an order of a player on your connection."
+  tax-part: " &7(%tax% tax)"
+  wrong-item: "&cThis order only takes %item%."
 
-# ── Collect messages ──────────────────────────────────────────────────────────
-collect-success: "&aɪᴛᴇᴍꜱ ᴄᴏʟʟᴇᴄᴛᴇᴅ ꜰʀᴏᴍ ꜱᴛᴀꜱʜ."
-collect-nothing: "&7ɴᴏᴛʜɪɴɢ ᴛᴏ ᴄᴏʟʟᴇᴄᴛ."
-collect-inventory-full: "&cɪɴᴠᴇɴᴛᴏʀʏ ꜰᴜʟʟ — ᴏᴠᴇʀꜰʟᴏᴡ ᴅʀᴏᴘᴘᴇᴅ ᴀᴛ ʏᴏᴜʀ ꜰᴇᴇᴛ."
+# ─── /orders sell ──────────────────────────────────────────────────────────
+sell:
+  nothing: "&cNo open order wants what you are selling."
+  sold: "&aSold &f%amount% &aitems to &f%orders% &aorders for &6%paid%&a.%tax%"
 
-# ── Order status labels ───────────────────────────────────────────────────────
-status:
-  active: "ᴀᴄᴛɪᴠᴇ"
-  completed: "ᴄᴏᴍᴘʟᴇᴛᴇᴅ"
-  expired: "ᴇxᴘɪʀᴇᴅ"
-  cancelled: "ᴄᴀɴᴄᴇʟʟᴇᴅ"
-  pending: "ᴘᴇɴᴅɪɴɢ ᴄᴏʟʟᴇᴄᴛɪᴏɴ"
-  claimed: "ᴄʟᴀɪᴍᴇᴅ"
-  color:
-    active: "&a"
-    completed: "&b"
-    expired: "&6"
-    cancelled: "&c"
-    pending: "&e"
-    claimed: "&8"
+# ─── /orders price ─────────────────────────────────────────────────────────
+price:
+  best: "&7Best open order: &6%price% &7each (%count% orders want %items%)"
+  header: "&dPrice check: &f%item%"
+  history: "&7Average &6%average% &7(range %min% to %max%, last %last%) over %items% items"
+  hold-item: "&cHold the item you want to price."
+  no-history: "&7No recent deliveries of this item."
+  no-open: "&7No open orders want this right now."
 
-# ── Time / expiry formatting ──────────────────────────────────────────────────
-time:
-  expired: "ᴇxᴘɪʀᴇᴅ"
-  days-suffix: "ᴅ"
-  hours-suffix: "ʜ"
-  minutes-suffix: "ᴍ"
+# ─── Collecting ────────────────────────────────────────────────────────────
+collect:
+  collected: "&aCollected &f%count% &aitems."
+  full: "&cMake room in your inventory first."
+  nothing: "&7Nothing to collect."
 
-# ── Shared pagination / buttons ───────────────────────────────────────────────
-buttons:
-  previous:
-    name: "&7« ᴘʀᴇᴠɪᴏᴜꜱ"
-    lore:
-      - "&8ᴘᴀɢᴇ {page} ᴏꜰ {max_page}"
-  next:
-    name: "&7ɴᴇxᴛ »"
-    lore:
-      - "&8ᴘᴀɢᴇ {page} ᴏꜰ {max_page}"
-  back:
-    name: "&7« ʙᴀᴄᴋ"
-    lore:
-      - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ."
-  close:
-    name: "&c&lᴄʟᴏꜱᴇ"
-    lore:
-      - "&7ᴄʟᴏꜱᴇ ᴛʜɪꜱ ᴍᴇɴᴜ."
-  confirm:
-    name: "&a&lᴄᴏɴꜰɪʀᴍ"
-  cancel:
-    name: "&c&lᴄᴀɴᴄᴇʟ"
+# ─── Mailbox ───────────────────────────────────────────────────────────────
+mail:
+  received: "&eSome items did not fit in your inventory and wait in your mailbox: &6/order mailbox"
 
-# ── GUI: Public Orders (marketplace) ─────────────────────────────────────────
+# ─── Cancelling ────────────────────────────────────────────────────────────
+cancel:
+  cancelled: "&aOrder cancelled. &6%refund% &awas refunded.%waiting%"
+  failed: "&cThe order could not be cancelled. Try again."
+  items-waiting: " &7Delivered items wait in &e/order&7."
+  not-open: "&cThat order is already closed."
+
+# ─── Changing an order ─────────────────────────────────────────────────────
+edit:
+  changed: "&cThat order changed in the meantime. Nothing was charged; try again."
+  charged: " &7%amount% was added to the order."
+  no-decrease: "&cOrder prices can only go up."
+  refunded: " &7%amount% was refunded."
+  saved: "&aOrder updated.%money%"
+
+# ─── /order alerts ─────────────────────────────────────────────────────────
+alerts:
+  disabled: "&7Delivery alerts and order announcements are off."
+  enabled: "&aDelivery alerts and order announcements are on."
+
+# ─── Notifications to buyers ───────────────────────────────────────────────
+notify:
+  delivered: "<green>%sellers% delivered <white>%amount%× %item%</white> to your order <gray>(%delivered%/%wanted%)</gray>. <yellow>/order</yellow> to collect."
+  filled: "<green>Your order for <white>%amount%× %item%</white> is complete! <yellow>/order</yellow> to collect."
+  filled-subtitle: "<white>%amount%× %item%"
+  filled-title: "<gradient:#49d6a0:#b8f5dc><b>ORDER FILLED</b>"
+  items-waiting: "<gray>%count% delivered items wait for you in <yellow>/order</yellow>."
+  many-sellers: "%first% and %count% others"
+  owed-paid: "<green>You received <gold>%amount%</gold> from your orders."
+  staff-reason: " (%reason%)"
+  summary-closed: " <dark_gray>•</dark_gray> <gray>%count% orders ended, <gold>%refund%</gold> refunded"
+  summary-deliveries: " <dark_gray>•</dark_gray> <white>%items%</white> items delivered to your orders <gray>(%value%)"
+  summary-filled: " <dark_gray>•</dark_gray> <green>%count%</green> orders filled"
+  summary-header: "<#49d6a0><b>While you were away</b>"
+
+# ─── New-order announcement ────────────────────────────────────────────────
+broadcast:
+  button: " <green><b>[Deliver]</b>"
+  hover: "<gray>Click to deliver to this order"
+  new-order: "<gray>%player% <white>wants <yellow>%amount%× %item%</yellow> for <gold>%price%</gold> each."
+
+# ─── Staff ─────────────────────────────────────────────────────────────────
+admin:
+  cancelled: "&aCancelled order %order% of %owner%; %refund% refunded."
+  frozen: "&eThe order market is frozen: nobody can create or deliver until /orderadmin unfreeze."
+  history-usage: "&cUsage (in game): /orderadmin history <player>"
+  info-cache: "&7Cached: &f%cached% &7orders (%active% open) · market %state%"
+  info-database: "&7Database: &f%counts%"
+  info-header: "&dDonutOrders %version% &7on %server%"
+  info-storage: "&7Storage: &f%storage% &7· Economy: &f%economy%"
+  info-unreadable: "&c%count% rows could not be read on this server version."
+  purge-usage: "&cUsage: /orderadmin purge <days>"
+  purged: "&aRemoved %count% finished orders older than %days% days."
+  reloaded: "&aDonutOrders configuration and messages reloaded."
+  server-created: "&aServer order %order% created."
+  server-failed: "&cThe server order could not be saved."
+  server-usage: "&cUsage: /orderadmin server <item|hand> <amount|unlimited> <price> [time]"
+  suspicious: "&c%seller% delivered to %owner%'s order %order% from the same address."
+  unfrozen: "&aThe order market is open again."
+  unknown-order: "&cNo open order has that id."
+  usage: "&cUsage: /orderadmin <reload|info|view|history|cancel|purge|server|freeze|unfreeze>"
+  view-usage: "&cUsage (in game): /orderadmin view <player>"
+
+# ─── Update check ──────────────────────────────────────────────────────────
+update:
+  available: "&eA newer version of DonutOrders is available."
+  up-to-date: "&aDonutOrders is up to date."
+  version-line: "&7Current: %current%  Latest: %latest%"
+
+# ─── Menus ─────────────────────────────────────────────────────────────────
 gui:
-  public-orders:
-    title: "ᴏʀᴅᴇʀꜱ"
-    my-orders:
-      name: "&b&lᴍʏ ᴏʀᴅᴇʀꜱ"
-      lore:
-        - "&7ᴠɪᴇᴡ ʏᴏᴜʀ ᴏᴡɴ ᴏʀᴅᴇʀꜱ."
-    order-item:
-      name: "&f{item}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ʙᴜʏᴇʀ: &f{buyer}"
-        - "&7ᴡᴀɴᴛꜱ: &f{remaining} &7/ &f{requested}"
-        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
-        - "&7ᴛᴏᴛᴀʟ ᴘᴏᴛᴇɴᴛɪᴀʟ: &a{total}"
-        - "&7ᴇxᴘɪʀᴇꜱ: &e{expiry}"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&eʟᴇꜰᴛ ᴄʟɪᴄᴋ &7ᴛᴏ ᴅᴇʟɪᴠᴇʀ ɪᴛᴇᴍꜱ"
+  back: "<yellow>Back"
+  board:
+    admin-cancel: "<red>Shift-right-click</red> <gray>to cancel (staff)"
+    category: "<#49d6a0>Category"
+    category-hint: "<yellow>Left/right-click</yellow> <gray>to change"
+    click-deliver: "<yellow>Click</yellow> <gray>to deliver"
+    count: "<gray>%count% open orders"
+    deliverable: "<#49d6a0>Only what I can deliver"
+    deliverable-hint: "<gray>Shows orders for items in your inventory"
+    empty-hint: "<gray>Create one with <yellow>/order</yellow>."
+    mine: "<#49d6a0>Your orders"
+    mine-hint: "<yellow>Click</yellow> <gray>to manage or create orders"
+    mine-open: "<gray>Open: <white>%count%"
+    mine-waiting: "<gray>Items to collect: <green>%count%"
+    option: "<dark_gray>  %option%"
+    option-selected: "<#49d6a0>▶ <white>%option%"
+    own-order: "<gray>This is your order. <yellow>/order</yellow> to manage it."
+    refresh: "<#49d6a0>Refresh"
+    search: "<#49d6a0>Search"
+    search-clear: "<yellow>Right-click</yellow> <gray>to clear"
+    search-current: "<gray>Searching: <white>%search%"
+    search-hint: "<gray>Items, enchantments or players"
+    sell: "<#49d6a0>Sell to orders"
+    sell-line: "<gray>Sells everything open orders want,"
+    sell-line-2: "<gray>best price first. You confirm first."
+    shift-deliver: "<yellow>Shift-click</yellow> <gray>to deliver from your inventory"
+    sort: "<#49d6a0>Sort"
+    sort-hint: "<yellow>Click</yellow> <gray>to change"
+    state-off: "<gray>Off"
+    state-on: "<green>On"
+    title: "Orders (%page%/%pages%)"
+    title-player: "Orders of %player% (%page%/%pages%)"
+  catalog:
+    held: "<#49d6a0>Order the item in your hand"
+    held-hint: "<gray>For potions, custom items and anything with variants"
+    held-line: "<gray>%item%"
+    held-none: "<gray>Hold an item to order exactly that item"
+    pick: "<yellow>Click</yellow> <gray>to order this"
+    pick-book: "<yellow>Click</yellow> <gray>to choose the enchantment"
+    title: "New order: pick an item (%page%/%pages%)"
+  close: "<red>Close"
+  confirm:
+    accept: "<green><b>Confirm"
+    admin-cancel: "<red>Cancel %player%'s order?"
+    admin-cancel-line: "<gray>The buyer is refunded what is still held."
+    cancel: "<red>Cancel this order?"
+    cancel-items: "<gray>Delivered items stay here to collect."
+    cancel-line: "<gray>You get <gold>%amount%</gold> back."
+    decline: "<red><b>Cancel"
+  create:
+    amount: "<#49d6a0>Amount: <white>%amount%"
+    amount-minus: "<red>%step%"
+    amount-plus: "<green>+%step%"
+    average: "<aqua>Use the average"
+    average-hint: "<yellow>Click</yellow> <gray>to use it"
+    average-line: "<gray>Recent deliveries averaged <gold>%price%"
+    balance: "<gray>Balance after: <white>%amount%"
+    cannot: "<red>Cannot create yet"
+    confirm: "<green><b>Create order"
+    confirm-hint: "<yellow>Click</yellow> <gray>to create the order"
+    cost: "<gray>You pay now: <gold>%amount%"
+    ends: "<gray>Ends in: <white>%duration%"
+    fee: "<gray>Order fee: <red>%amount%"
+    first-in-line: "<green>Your order will be first in line"
+    insight: "<aqua>Price insight"
+    insight-average: "<gray>Average: <gold>%price%"
+    insight-best: "<gray>Best open price: <gold>%price%"
+    insight-last: "<gray>Last: <white>%price%"
+    insight-loading: "<gray>Loading..."
+    insight-no-open: "<gray>No other open orders for this item"
+    insight-none: "<gray>No deliveries in the last %days% days"
+    insight-open: "<gray>Open orders: <white>%count%</white> wanting <white>%items%"
+    insight-range: "<gray>Range: <white>%min%</white> to <white>%max%"
+    insight-volume: "<gray>Delivered: <white>%items%</white> items in %count% deliveries"
+    mode-book: "<dark_gray>Books with exactly this enchantment count"
+    mode-exact: "<dark_gray>Only this exact item counts"
+    mode-type: "<dark_gray>Any plain %item% counts"
+    ordering: "<gray>You are ordering this item"
+    outbid: "<gold>Outbid the best order"
+    outbid-hint: "<yellow>Click</yellow> <gray>to pay %price%"
+    outbid-line: "<gray>Best open order pays <gold>%price%</gold> each"
+    overpay: "<red>⚠ That is %times%× the average price!"
+    price: "<#49d6a0>Price each: <gold>%price%"
+    price-hint: "<yellow>Click</yellow> <gray>to type a price (2.5k, 1m work)"
+    price-minus: "<red>%step%"
+    price-plus: "<green>%step%"
+    summary: "<white>%amount%× %item%</white> <gray>at <gold>%price%</gold> each"
+    title: "New order"
+    total: "<gray>Held for sellers: <gold>%amount%"
+    type-hint: "<yellow>Click</yellow> <gray>to type a number"
+  deliver:
+    cancel: "<red>Cancel"
+    cancel-line: "<gray>Your items come back"
+    confirm: "<green><b>Deliver</b> %amount%× %item%"
+    extra: "<gray>Extra items come back to you"
+    fill: "<#49d6a0>Add from inventory"
+    fill-line: "<gray>Moves every matching item from your inventory"
+    how: "<gray>Put the items in the slots above."
+    how-2: "<gray>Shulker boxes are opened for you."
+    payout: "<gray>You get: <green>%amount%"
+    tax: "<gray>Tax: <red>-%amount%"
+    title: "Deliver to %player%"
+  edit:
+    add: "<#49d6a0>Add items: <white>+%amount%"
+    cancel: "<red>Cancel this order"
+    change-amount: "<gray>Amount: <white>%old% → %new%"
+    change-price: "<gray>Price: <white>%old% → %new%"
+    change-time: "<gray>Ends in: <white>%old% → %new%"
+    charge: "<gray>You pay: <gold>%amount%"
+    new-amount: "<gray>New total: <white>%amount%"
+    nothing: "<gray>Change the amount, price or time first"
+    old-price: "<gray>Now: <white>%price%"
+    refund: "<gray>You get back: <green>%amount%"
+    save: "<green><b>Save changes"
+    title: "Change your order"
+  enchant:
+    level-title: "Pick a level"
+    levels: "<gray>Levels 1 to %max%"
+    pick: "<yellow>Click</yellow> <gray>to choose the level"
+    pick-level: "<yellow>Click</yellow> <gray>to order this book"
+    title: "Pick an enchantment"
+  history:
+    closed: "<gray>Closed: <white>%date%"
+    date-format: "yyyy-MM-dd HH:mm"
+    delivery-amount: "<gray>%amount%× at <gold>%price%</gold> each"
+    delivery-date: "<dark_gray>%date%"
+    delivery-paid: "<gray>You got: <green>%amount%"
+    delivery-to: "<gray>To <white>%player%</white>'s order"
+    empty: "<gray>Nothing here yet"
+    loading: "<gray>Loading..."
+    show-deliveries: "<#49d6a0>Show your deliveries"
+    show-orders: "<#49d6a0>Show finished orders"
+    stats: "<#49d6a0>Your totals"
+    stats-delivered: "<gray>You delivered: <white>%items%</white> items for <gold>%amount%"
+    stats-received: "<gray>You received: <white>%items%</white> items for <gold>%amount%"
+    title: "Finished orders (page %page%)"
+    title-deliveries: "Your deliveries (page %page%)"
+  mine:
+    alerts: "<#49d6a0>Alerts"
+    alerts-line: "<gray>Delivery alerts and new-order announcements"
+    board: "<#49d6a0>All orders"
+    click-cancel: "<red>Shift-right-click</red> <gray>to cancel"
+    click-collect: "<yellow>Click</yellow> <gray>to collect"
+    click-edit: "<yellow>Right-click</yellow> <gray>to change price, amount or time"
+    collect: "<#49d6a0>Collect all"
+    collect-line: "<gray>Items waiting: <green>%count%"
+    empty: "<gray>You have no orders"
+    empty-hint: "<gray>Click <green>New order</green> to buy items from other players."
+    escrow: "<gray>Money held: <gold>%amount%"
+    history: "<#49d6a0>History"
+    history-line: "<gray>Finished orders and your deliveries"
+    id: "<dark_gray>#%id%"
+    mailbox: "<#49d6a0>Mailbox"
+    mailbox-count: "<gray>Items waiting: <green>%count%"
+    mailbox-hint: "<yellow>Click</yellow> <gray>to take them"
+    mailbox-line: "<gray>Items that did not fit in your inventory"
+    new: "<green><b>New order"
+    new-held: "<yellow>Shift-click</yellow> <gray>to order the item in your hand"
+    new-hint: "<yellow>Click</yellow> <gray>to pick an item"
+    slots: "<gray>Open orders: <white>%open%</white>/%limit%"
+    title: "Your orders (%page%/%pages%)"
+    waiting: "<gray>Ready to collect: <green>%count%"
+  next: "<yellow>Next page"
+  order:
+    buyer: "<gray>Buyer: <white>%player%"
+    ends: "<gray>Ends in: <white>%time%"
+    paid: "<gray>Paid out: <gold>%paid%"
+    price: "<gray>Pays: <gold>%price%</gold> each"
+    progress: "<gray>Delivered: <white>%delivered%</white>/%amount% %bar%"
+    remaining: "<gray>Still wants: <white>%remaining%</white> <dark_gray>(%value%)"
+    status: "<gray>Status: <white>%status%"
+    unlimited: "<gray>Wants: <white>as many as you have"
+  previous: "<yellow>Previous page"
+  sell:
+    gross: "<gray>Worth: <gold>%amount%"
+    net: "<gray>You get: <green>%amount%"
+    no-tax: "<gray>No tax"
+    orders: "<gray>To <white>%count%</white> orders, best price first"
+    tax: "<gray>Tax: <red>-%amount%"
+    title: "Sell to orders?"
+    title-item: "<green>Sell %amount% items"
 
-  # ── GUI: Your Orders ──────────────────────────────────────────────────────
-  your-orders:
-    title: "ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ"
-    new-order:
-      name: "&a&lɴᴇᴡ ᴏʀᴅᴇʀ"
-      lore:
-        - "&7ᴄʀᴇᴀᴛᴇ ᴀ ɴᴇᴡ ʙᴜʏ ᴏʀᴅᴇʀ."
-    browse-market:
-      name: "&b&lʙʀᴏᴡꜱᴇ ᴍᴀʀᴋᴇᴛ"
-      lore:
-        - "&7ᴠɪᴇᴡ ᴀʟʟ ᴘᴜʙʟɪᴄ ᴏʀᴅᴇʀꜱ."
-    order-item:
-      name: "{status_color}{item}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ꜱᴛᴀᴛᴜꜱ: {status_color}{status}"
-        - "&7ᴘʀᴏɢʀᴇꜱꜱ: &f{fulfilled} &7/ &f{requested}"
-        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
-        - "&7ᴇxᴘɪʀᴇꜱ: &e{expiry}"
-        - "{stash_line}"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&eʟᴇꜰᴛ ᴄʟɪᴄᴋ &7ᴛᴏ ᴠɪᴇᴡ ᴅᴇᴛᴀɪʟꜱ"
-    stash-has-items: "&e⬛ ꜱᴛᴀꜱʜ ʜᴀꜱ ɪᴛᴇᴍꜱ"
-    stash-empty: "&7ꜱᴛᴀꜱʜ ɪꜱ ᴇᴍᴘᴛʏ"
+# ─── Categories ────────────────────────────────────────────────────────────
+category:
+  all: "All"
+  blocks: "Blocks"
+  books: "Books"
+  combat: "Combat"
+  food: "Food"
+  ingredients: "Ingredients"
+  potions: "Potions"
+  spawners: "Spawners"
+  tools: "Tools"
+  utilities: "Utilities"
 
-  order-history:
-    title: "ᴏʀᴅᴇʀ ʜɪꜱᴛᴏʀʏ"
-    admin-title: "ᴏʀᴅᴇʀ ʜɪꜱᴛᴏʀʏ: {player}"
-    active-orders:
-      name: "&e&lᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ"
-      lore:
-        - "&7ᴠɪᴇᴡ ʏᴏᴜʀ ᴀᴄᴛɪᴠᴇ ᴏʀᴅᴇʀꜱ."
+# ─── Board sorts ───────────────────────────────────────────────────────────
+sort:
+  ending-soon: "Ending soon"
+  money-per-item: "Money per item"
+  most-delivered: "Most delivered"
+  most-paid: "Most paid"
+  recently-listed: "Recently listed"
 
-  # ── GUI: New Order (item picker) ──────────────────────────────────────────
-  new-order:
-    title: "ɴᴇᴡ ᴏʀᴅᴇʀ"
-    title-filtered: "&fɴᴇᴡ ᴏʀᴅᴇʀ &8| &e{query}"
-    search-prompt: "&eᴇɴᴛᴇʀ ᴀɴ ɪᴛᴇᴍ ɴᴀᴍᴇ ᴛᴏ ꜱᴇᴀʀᴄʜ (ᴏʀ &c{0}&e):"
-    search:
-      name: "&e&lꜱᴇᴀʀᴄʜ"
-      lore:
-        - "&7ꜰɪʟᴛᴇʀ ɪᴛᴇᴍꜱ ʙʏ ɴᴀᴍᴇ."
-        - "&7ᴄʟɪᴄᴋ ᴛᴏ ᴛʏᴘᴇ ᴀ ꜱᴇᴀʀᴄʜ ᴛᴇʀᴍ."
-    clear-search:
-      name: "&c&lᴄʟᴇᴀʀ ꜱᴇᴀʀᴄʜ"
-      lore:
-        - "&7ᴀᴄᴛɪᴠᴇ ꜰɪʟᴛᴇʀ: &f{query}"
-        - "&7ᴄʟɪᴄᴋ ᴛᴏ ᴄʟᴇᴀʀ."
-    no-results:
-      name: "&c&lɴᴏ ʀᴇꜱᴜʟᴛꜱ"
-      lore:
-        - "&7ɴᴏ ɪᴛᴇᴍꜱ ᴍᴀᴛᴄʜ &f{query}&7."
-        - "&7ᴛʀʏ ᴀ ᴅɪꜰꜰᴇʀᴇɴᴛ ꜱᴇᴀʀᴄʜ ᴏʀ ᴄʟᴇᴀʀ ᴛʜᴇ ꜰɪʟᴛᴇʀ."
-    material:
-      name: "&f{item}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ʟᴇꜰᴛ ᴄʟɪᴄᴋ &eᴛᴏ ꜱᴇʟᴇᴄᴛ"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-    back:
-      name: "&c&lʙᴀᴄᴋ"
-      lore:
-        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ."
+# ─── Order states ──────────────────────────────────────────────────────────
+status:
+  active: "Open"
+  cancelled: "Cancelled"
+  expired: "Expired"
+  filled: "Filled"
 
-  # ── GUI: Enchant Picker (enchanted books) ─────────────────────────────────
-  enchant-picker:
-    title: "ꜱᴇʟᴇᴄᴛ ᴇɴᴄʜᴀɴᴛ"
-    enchant:
-      name: "&f{enchant}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ʟᴇꜰᴛ ᴄʟɪᴄᴋ &eᴛᴏ ꜱᴇʟᴇᴄᴛ"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-    back:
-      name: "&c&lʙᴀᴄᴋ"
-      lore:
-        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ɪᴛᴇᴍ ꜱᴇʟᴇᴄᴛɪᴏɴ."
+# ─── Durations ─────────────────────────────────────────────────────────────
+time:
+  day: "%count% day"
+  days: "%count% days"
+  expired: "ended"
+  hour: "%count% hour"
+  hours: "%count% hours"
+  minute: "%count% minute"
+  minutes: "%count% minutes"
+  short-day: "d"
+  short-hour: "h"
+  short-minute: "m"
 
-  # ── GUI: Enchant Level ────────────────────────────────────────────────────
-  enchant-level:
-    title: "ꜱᴇʟᴇᴄᴛ ʟᴇᴠᴇʟ"
-    level:
-      name: "&f{enchant} {level}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ʟᴇꜰᴛ ᴄʟɪᴄᴋ &eᴛᴏ ꜱᴇʟᴇᴄᴛ"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-    back:
-      name: "&c&lʙᴀᴄᴋ"
-      lore:
-        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ᴇɴᴄʜᴀɴᴛ ꜱᴇʟᴇᴄᴛɪᴏɴ."
-
-  # ── GUI: Order Details ────────────────────────────────────────────────────
-  order-detail:
-    title: "ᴏʀᴅᴇʀ ᴅᴇᴛᴀɪʟꜱ"
-    summary:
-      name: "&f&l{item}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ꜱᴛᴀᴛᴜꜱ: {status_color}{status}"
-        - "&7ᴘʀᴏɢʀᴇꜱꜱ: &f{fulfilled} &7/ &f{requested}"
-        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
-        - "&7ꜰᴜɴᴅꜱ ʜᴇʟᴅ: &a{funds}"
-        - "&7ᴇxᴘɪʀᴇꜱ: &e{expiry}"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-    collect:
-      name: "&a&lᴄᴏʟʟᴇᴄᴛ"
-      lore:
-        - "&7ᴏᴘᴇɴ ꜱᴛᴀꜱʜ ᴀɴᴅ ᴄᴏʟʟᴇᴄᴛ ɪᴛᴇᴍꜱ."
-        - "{stash_line}"
-    cancel:
-      name: "&c&lᴄᴀɴᴄᴇʟ ᴏʀᴅᴇʀ"
-      lore:
-        - "&7ᴄᴀɴᴄᴇʟ ᴛʜɪꜱ ᴏʀᴅᴇʀ."
-        - "&7ʀᴇᴍᴀɪɴɪɴɢ ꜰᴜɴᴅꜱ: &a{funds} &7ʀᴇꜰᴜɴᴅᴇᴅ."
-    back:
-      name: "&7« ʙᴀᴄᴋ"
-      lore:
-        - "&7ʀᴇᴛᴜʀɴ ᴛᴏ ʏᴏᴜʀ ᴏʀᴅᴇʀꜱ."
-
-  # ── GUI: Deliver Items ────────────────────────────────────────────────────
-  deliver-items:
-    title: "ᴅᴇʟɪᴠᴇʀ ɪᴛᴇᴍꜱ"
-    order-info:
-      name: "&b&l{item}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ʙᴜʏᴇʀ: &f{buyer}"
-        - "&7ɴᴇᴇᴅꜱ: &f{remaining}"
-        - "&7ᴘʀɪᴄᴇ/ᴜɴɪᴛ: &a{price}"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ᴘʟᴀᴄᴇ &f{item} &7ɪɴ ᴛʜᴇ ꜱʟᴏᴛꜱ ᴀʙᴏᴠᴇ."
-        - "&7ꜱʜᴜʟᴋᴇʀ ʙᴏxᴇꜱ ᴡɪᴛʜ ᴍᴀᴛᴄʜɪɴɢ"
-        - "&7ɪᴛᴇᴍꜱ ᴀʀᴇ ᴀʟꜱᴏ ꜱᴜᴘᴘᴏʀᴛᴇᴅ."
-    confirm:
-      name: "&a&lᴄᴏɴꜰɪʀᴍ"
-      lore:
-        - "&7ᴘʀᴏᴄᴇᴇᴅ ᴡɪᴛʜ ᴅᴇʟɪᴠᴇʀʏ."
-    cancel:
-      name: "&c&lᴄᴀɴᴄᴇʟ"
-      lore:
-        - "&7ɢᴏ ʙᴀᴄᴋ ᴛᴏ ᴛʜᴇ ᴍᴀʀᴋᴇᴛᴘʟᴀᴄᴇ."
-
-  # ── GUI: Confirm Delivery ─────────────────────────────────────────────────
-  confirm-delivery:
-    title: "ᴄᴏɴꜰɪʀᴍ ᴅᴇʟɪᴠᴇʀʏ"
-    summary:
-      name: "&f&l{item}"
-      lore:
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-        - "&7ᴅᴇʟɪᴠᴇʀɪɴɢ: &f{count}"
-        - "&7ᴘᴀʏᴏᴜᴛ: &a{payout}"
-        - "&8━━━━━━━━━━━━━━━━━━━━"
-    confirm:
-      name: "&a&lᴄᴏɴꜰɪʀᴍ"
-      lore:
-        - "&7ᴄʟɪᴄᴋ ᴛᴏ ᴅᴇʟɪᴠᴇʀ ᴀɴᴅ ʀᴇᴄᴇɪᴠᴇ ᴘᴀʏᴍᴇɴᴛ."
-    cancel:
-      name: "&c&lᴄᴀɴᴄᴇʟ"
-      lore:
-        - "&7ɢᴏ ʙᴀᴄᴋ."
-
-  # ── GUI: Collect Stash ────────────────────────────────────────────────────
-  collect-stash:
-    title: "ᴄᴏʟʟᴇᴄᴛ"
-    collect-all:
-      name: "&a&lᴄᴏʟʟᴇᴄᴛ ᴀʟʟ"
-      lore:
-        - "&7ɢɪᴠᴇ ᴀʟʟ ɪᴛᴇᴍꜱ ᴛᴏ ʏᴏᴜʀ ɪɴᴠᴇɴᴛᴏʀʏ."
-        - "&7ᴏᴠᴇʀꜰʟᴏᴡ ᴡɪʟʟ ʙᴇ ᴅʀᴏᴘᴘᴇᴅ ᴀᴛ ʏᴏᴜʀ ꜰᴇᴇᴛ."
-    close:
-      name: "&c&lᴄʟᴏꜱᴇ"
-      lore:
-        - "&7ᴄʟᴏꜱᴇ ᴛʜɪꜱ ᴍᴇɴᴜ."
+# ─── unknown-player ────────────────────────────────────────────────────────
+unknown-player: "Unknown"

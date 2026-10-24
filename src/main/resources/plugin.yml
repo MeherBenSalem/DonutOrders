@@ -1,40 +1,77 @@
 name: DonutOrders
 version: '${project.version}'
-main: com.donutorders.DonutOrders
-# Minimum API version. Keep 1.20 so 1.20.x servers still load; 26.3 accepts this.
+main: io.nightbeam.donutorders.DonutOrdersPlugin
+# Loads on 1.20.1 and every newer version up to 26.3.
 api-version: '1.20'
-description: Player-driven buy-order marketplace.
+folia-supported: true
+description: Buy orders for Paper and Folia. Players post what they want, others deliver it and get paid.
 author: NightBeam
 website: https://github.com/MeherBenSalem/DonutOrders
-
-# Required so that Folia loads this plugin.
-# Without this flag Folia silently disables the plugin.
-folia-supported: true
-
-softdepend:
-  - Vault
-  - LuckPerms
-  - PlaceholderAPI
+softdepend: [Vault, VaultUnlocked, PlaceholderAPI, LuckPerms]
 
 commands:
-  order:
-    description: View and manage your buy orders.
-    usage: /order [history]
-    permission: donutorders.use
   orders:
-    description: Browse the public order marketplace.
-    usage: /orders
-    permission: donutorders.use
+    description: Browse open orders, deliver, sell and check prices.
+    usage: /orders [search|sell|price|view|help]
     aliases: [market, donutorders]
+  order:
+    description: Your orders. Create, collect, change and cancel them.
+    usage: /order [new|create|collect|mailbox|history|alerts|cancel]
   orderadmin:
-    description: DonutOrders administration.
-    usage: /orderadmin <reload|history|simulate> [player]
-    permission: donutorders.admin
+    description: DonutOrders staff tools.
+    usage: /orderadmin <reload|info|view|history|cancel|purge|server|freeze|unfreeze>
+    aliases: [ordersadmin]
 
 permissions:
   donutorders.use:
-    description: Allows players to use /order and /orders.
+    description: Open the board and your orders.
     default: true
+    children:
+      donutorders.create: true
+      donutorders.deliver: true
+      donutorders.sell: true
+  donutorders.create:
+    description: Create orders.
+    default: true
+  donutorders.create.exact:
+    description: Order the exact item in your hand (potions, custom items, anything with variants).
+    default: true
+  donutorders.deliver:
+    description: Deliver items to orders.
+    default: true
+  donutorders.sell:
+    description: Use /orders sell and the board's sell button.
+    default: true
+  donutorders.limit.unlimited:
+    description: No limit on open orders. donutorders.limit.<number> raises the limit to that number.
+    default: op
+  donutorders.fee.exempt:
+    description: No creation fee.
+    default: false
+  donutorders.bypass.restrictions:
+    description: Use orders in disabled worlds and game modes, and while the market is frozen.
+    default: op
+  donutorders.bypass.cooldown:
+    description: No wait between creating orders.
+    default: op
+  donutorders.bypass.blacklist:
+    description: Order blacklisted items.
+    default: op
+  donutorders.bypass.amount:
+    description: No cap on the amount of one order.
+    default: op
+  donutorders.bypass.address:
+    description: Not checked for deliveries between players on one address.
+    default: false
   donutorders.admin:
-    description: Allows /orderadmin commands (reload, history, simulate).
+    description: /orderadmin, cancelling any order from the board.
+    default: op
+    children:
+      donutorders.admin.alerts: true
+      donutorders.update.notify: true
+  donutorders.admin.alerts:
+    description: Told about suspicious deliveries.
+    default: op
+  donutorders.update.notify:
+    description: Told about new versions on join.
     default: op

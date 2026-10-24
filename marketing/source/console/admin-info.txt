@@ -1,0 +1,4 @@
+Orders » DonutOrders 2.0.0 on Paper 1.21.11-R0.1-SNAPSHOT
+Orders » Storage: SQLITE · Economy: Vault v1.7.3-b131
+Orders » Cached: 46 orders (44 open) · market open
+Orders » Database: active=44, filled=2, stored_stacks=26, mail_stacks=0, deliveries=18, payouts_owed=0

@@ -1,0 +1,12 @@
+{
+  "name": "donutorders-smoke",
+  "private": true,
+  "description": "Boots real Paper/Folia servers across the supported range and drives DonutOrders with mineflayer bots.",
+  "type": "module",
+  "scripts": {
+    "matrix": "node run.mjs"
+  },
+  "dependencies": {
+    "mineflayer": "4.39.0"
+  }
+}
