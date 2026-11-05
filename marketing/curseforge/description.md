@@ -1,5 +1,9 @@
 ![DonutOrders 2.0: The Supply Update](https://raw.githubusercontent.com/MeherBenSalem/DonutOrders/main/marketing/images/banner.png)
 
+**[Discord](https://discord.gg/TJc3CxR4jK) · [Premium plugins](https://nightbeam.dev/store) · [Support NightBeam](https://nightbeam.dev/support) · [NightBeam Pro](https://nightbeam.dev/memberships) · [All projects](https://nightbeam.dev/projects)**
+
+> **Running a server?** NightBeam's premium plugins are on [BuiltByBit](https://nightbeam.dev/store): NightWatch Pro anti-cheat, the AstralSMP setup, Astral Core and more.
+
 ## The order board your players already know, made safe
 
 **DonutOrders** is free, open-source buy orders for Paper, Folia and Purpur, from Minecraft **1.20.1 to 26.3**.
@@ -8,8 +12,8 @@ A player posts what they want and what they pay for each item, and the money is 
 `/orders`, drop the items in and get paid on the spot, or sell everything into the best orders with one command. The
 buyer is told, collects whenever they like, and can raise the price, add items or cancel for a refund.
 
-Every delivery, cancel and expiry is a database update that only one click, on one server, can win. Money moves only
-after it does.
+Every delivery, cancel and expiry is a database update that exactly one click, on one server, can win. Money moves
+after it does, never before.
 
 **2.0 "The Supply Update"** is a full rebuild. It adds the SMP board sorts, `/orders sell`, shulker delivery, price
 insight, order editing, server orders, cross-server notifications, Discord, PlaceholderAPI and a developer API. Each
@@ -27,7 +31,7 @@ release is tested on every supported Paper and Folia version with real clients.
   fifth.
 - **Nine categories**: blocks, tools, food, combat, potions, books, ingredients, utilities and spawners.
 - **Search** by item, enchantment (`mending`) or player: `/orders diamond`.
-- **Only what I can deliver**: one click hides every order you have nothing for.
+- **What I can deliver**: one click hides every order you have nothing for.
 - Each order shows the buyer, the price each, a progress bar, what is still wanted, what has been paid out and the
   time left.
 - Item and enchantment names appear in each player's own language.
@@ -36,7 +40,7 @@ release is tested on every supported Paper and Folia version with real clients.
 
 ![Deliver in two clicks](https://raw.githubusercontent.com/MeherBenSalem/DonutOrders/main/marketing/images/card-deliver.png)
 
-1. Click an order. The delivery menu only takes items the order accepts; wrong items are refused at the slot.
+1. Click an order. The delivery menu takes just the items the order accepts; wrong items are refused at the slot.
 2. Drop items in, or click **Add from inventory**. The Deliver button shows what you will receive, after tax.
 3. Click **Deliver** and you are paid at once. Anything the order did not need comes straight back.
 
@@ -58,10 +62,10 @@ opened for you**: the order takes what it wants, and the box comes back with the
 
 ![Order anything](https://raw.githubusercontent.com/MeherBenSalem/DonutOrders/main/marketing/images/card-create.png)
 
-- **The item picker** lists every item your server has, by category or search, with your best sellers first.
+- **The item picker** lists every item your server has, by category or search, with your best sellers at the top.
 - **Enchanted books**: pick the enchantment and level. The list comes from the server, so new and data-pack
   enchantments are there.
-- **Order the item in your hand**: potions, goat horns, custom items, anything with variants. Only that exact item
+- **Order the item in your hand**: potions, goat horns, custom items, anything with variants. That exact item, and nothing else,
   counts.
 - Amount buttons or a typed number; a typed price (`2.5k`, `1m` and `3b` work); a duration from 1 hour to 30 days
   (configurable, longer by permission).
@@ -86,7 +90,7 @@ opened for you**: the order takes what it wants, and the box comes back with the
 ![Nothing is ever lost](https://raw.githubusercontent.com/MeherBenSalem/DonutOrders/main/marketing/images/card-orders.png)
 
 - `/order` lists your orders with what is ready to collect and the money still held.
-- **Collect** one order, or **Collect all**. Items are only handed over as whole stacks that fit; the rest waits.
+- **Collect** one order, or **Collect all**. Items are handed over as whole stacks that fit; the rest waits.
 - **Change an order**: add items, raise or lower the price, add time. The difference is charged or refunded on the
   spot. Outbid the competition without starting over.
 - **Cancel** for an instant refund of the money still held. Delivered items stay ready to collect.
@@ -134,7 +138,7 @@ Fees and tax are off until you turn them on. Every rule has a bypass permission 
   happens exactly once.
 - **Items in transit are tracked** until they are delivered or handed back, through logouts, deaths and server
   stops.
-- **Folia-safe**: inventories only change on the player's own thread.
+- **Folia-safe**: inventories change on the player's own thread and nowhere else.
 - **Upgrade-proof**: items are stored in Paper's versioned format, so orders survive Minecraft updates.
 - **Matching that cannot be gamed**: a custom "Super Diamond" is never sold as a diamond, and a full shulker box is
   never sold as an empty one.
@@ -209,7 +213,7 @@ Fees and tax are off until you turn them on. Every rule has a bypass permission 
 
 - Needs **Vault** or **VaultUnlocked** and an economy plugin (EssentialsX, CMI, and others).
 - Optional: PlaceholderAPI, LuckPerms, MySQL or MariaDB, and Redis.
-- One jar for every version. Install it on the server only; players need no mods.
+- One jar for every version. Install it on the server; players need no mods.
 - Each release runs an automated matrix on real servers: Paper 1.20.1, 1.20.4, 1.20.6, 1.21.1, 1.21.4, 1.21.8,
   1.21.11, 26.1.2, 26.2 and 26.3, and Folia 1.20.4, 1.21.4, 1.21.11 and 26.3. Real clients create, deliver, sell,
   collect, cancel and expire orders on each.
@@ -241,15 +245,15 @@ PlaceholderAPI, cross-server and the API. The source is on GitHub under Apache-2
 
 **I'm updating from 1.x. Will I lose anything?**
 No. Open orders, held money, stashed items and your settings are carried over, and the old files are kept. Back up
-your database first, as with any update.
+your database beforehand, as with any update.
 
 **Does it work on Spigot?**
 Not since 2.0. DonutOrders uses Paper's API (Adventure text, region schedulers). Paper is a drop-in replacement for
 Spigot, and Purpur and other Paper forks work too.
 
 **Can players dupe items or money with it?**
-Every delivery, cancel, expiry, edit and collection is a conditional database update that only one action can win.
-Money moves only after it. Items in transit are tracked until they are delivered or handed back, and nothing is ever
+Every delivery, cancel, expiry, edit and collection is a conditional database update that exactly one action can win.
+Money moves after it, never before. Items in transit are tracked until they are delivered or handed back, and nothing is ever
 dropped on the ground. If you ever find a way, please report it privately (see SECURITY.md on GitHub).
 
 **What stops someone selling a renamed or custom item as the real thing?**
@@ -305,3 +309,15 @@ DonutOrders is licensed under Apache-2.0. The Outfit and Inter fonts used in thi
 Open Font License 1.1. Screenshots are unedited captures of the vanilla Minecraft client on a Paper server running
 the plugin. DonutOrders is an independent project and is not affiliated with Mojang, Microsoft or any server it takes
 inspiration from.
+
+---
+
+### More from NightBeam Studio
+
+- **[Remnants: Ashen Legacy](https://www.curseforge.com/minecraft/modpacks/remnants-ashen-legacy)**: the story-driven soulslike RPG modpack built on NightBeam's mods
+- **[Premium server plugins](https://nightbeam.dev/store)**: anti-cheat, ranked PvP, SMP setups and more on BuiltByBit
+- **[NightBeam Pro](https://nightbeam.dev/memberships)**: the model library and NightBeam Forge credits, from $5 a month
+- **[Discord](https://discord.gg/TJc3CxR4jK)**: support, bug reports, suggestions and early looks
+- **[Support NightBeam](https://nightbeam.dev/support)**: help keep every mod free
+
+**Follow:** [YouTube](https://www.youtube.com/@nightbeamstudio) · [Instagram](https://www.instagram.com/nightbeamstudio/) · [X](https://x.com/NightBeamLLC) · [Facebook](https://www.facebook.com/profile.php?id=61574823331471) · [Source and issues](https://github.com/MeherBenSalem/DonutOrders)
