@@ -1,6 +1,6 @@
 ![DonutOrders 2.0: The Supply Update](https://raw.githubusercontent.com/MeherBenSalem/DonutOrders/main/marketing/images/banner.png)
 
-**[Discord](https://discord.gg/TJc3CxR4jK) · [Source and issues](https://github.com/MeherBenSalem/DonutOrders)**
+**[Docs](https://nightbeam.dev/docs/donut-orders) · [Discord](https://discord.gg/TJc3CxR4jK) · [Source and issues](https://github.com/MeherBenSalem/DonutOrders)**
 
 ## The order board your players already know, made safe
 
