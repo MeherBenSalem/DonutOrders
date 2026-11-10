@@ -51,3 +51,9 @@ graphify-out/
 node_modules/
 marketing/source/.render-*.html
 __pycache__/
+
+build/
+.gradle/
+out/
+run/
+runs/
