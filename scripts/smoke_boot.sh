@@ -81,13 +81,22 @@ for extra in "${EXTRAS[@]}"; do
   case "$extra" in
     modrinth:*)
       slug="${extra#modrinth:}"
-      url="$(fetch_json "https://api.modrinth.com/v2/project/${slug}/version?loaders=%5B%22${LOADER}%22%5D" | python3 -c '
+      # Newest release that lists this Minecraft version, else the newest release for the loader.
+      mr="https://api.modrinth.com/v2/project/${slug}/version?loaders=%5B%22${LOADER}%22%5D"
+      url="$( { fetch_json "${mr}&game_versions=%5B%22${VERSION}%22%5D"; echo; fetch_json "$mr"; } | python3 -c '
 import json, sys
-vs = json.load(sys.stdin)
-v = next((v for v in vs if v.get("version_type") == "release"), vs[0] if vs else None)
-if not v: sys.exit("no version")
-f = next((f for f in v["files"] if f.get("primary")), v["files"][0])
-print(f["url"])
+for line in sys.stdin.read().splitlines():
+    line = line.strip()
+    if not line:
+        continue
+    vs = json.loads(line)
+    v = next((v for v in vs if v.get("version_type") == "release"), vs[0] if vs else None)
+    if v:
+        f = next((f for f in v["files"] if f.get("primary")), v["files"][0])
+        print(f["url"])
+        break
+else:
+    sys.exit("no Modrinth version found")
 ')"
       say "extra plugin ${slug}: ${url}"
       curl -fsSL --retry 3 -A "$UA" -o "$SMOKE_DIR/plugins/${slug}.jar" "$url"
@@ -107,8 +116,6 @@ echo "eula=true" > "$SMOKE_DIR/eula.txt"
 cat > "$SMOKE_DIR/server.properties" <<EOF
 online-mode=false
 server-port=25565
-level-type=minecraft\:flat
-generate-structures=false
 spawn-protection=0
 max-players=2
 view-distance=4
