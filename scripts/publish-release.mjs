@@ -1,7 +1,7 @@
 /**
- * Upload one Paper/Folia plugin jar as a single Modrinth version and a single
- * CurseForge file, tagged for every Minecraft version in
- * release/supported-minecraft.json.
+ * Upload one Paper/Folia plugin jar as a single CurseForge file, tagged for every
+ * Minecraft version in release/supported-minecraft.json (NightBeam convention:
+ * CurseForge only since 24 Nov 2026; the Modrinth project gets no new versions).
  */
 import fs from "fs";
 import path from "path";
@@ -23,9 +23,6 @@ if (!Array.isArray(loaders) || loaders.length === 0) {
 }
 
 const version = process.env.VERSION;
-const platforms = (process.env.PLATFORMS || "both").toLowerCase();
-const doModrinth = platforms === "both" || platforms === "modrinth";
-const doCurse = platforms === "both" || platforms === "curseforge";
 const jar = process.env.JAR_PATH;
 
 if (!version) throw new Error("VERSION is required");
@@ -67,43 +64,7 @@ const changelog = resolveChangelog(version);
 const jarName = path.basename(jar);
 
 (async () => {
-  if (doModrinth) {
-    if (!process.env.MODRINTH_TOKEN || !process.env.MODRINTH_ID) {
-      throw new Error("MODRINTH_TOKEN and MODRINTH_ID are required");
-    }
-    const body = {
-      name: version,
-      version_number: version,
-      changelog,
-      dependencies: [],
-      game_versions: gameVersions,
-      version_type: "release",
-      loaders,
-      featured: true,
-      status: "listed",
-      project_id: process.env.MODRINTH_ID,
-      file_parts: ["file_0"],
-      primary_file: "file_0",
-    };
-    const form = new FormData();
-    form.append("data", new Blob([JSON.stringify(body)], { type: "application/json" }));
-    form.append("file_0", new Blob([fs.readFileSync(jar)]), jarName);
-    const mrRes = await fetch("https://api.modrinth.com/v2/version", {
-      method: "POST",
-      headers: { Authorization: process.env.MODRINTH_TOKEN },
-      body: form,
-    });
-    const mrText = await mrRes.text();
-    if (!mrRes.ok) throw new Error("Modrinth " + mrRes.status + " " + mrText.slice(0, 500));
-    console.log("Modrinth OK", version, loaders.join("+"), gameVersions.length, "MC versions");
-  } else {
-    console.log("Skipping Modrinth");
-  }
-
-  if (!doCurse) {
-    console.log("Skipping CurseForge");
-    return;
-  }
+  if (!process.env.CURSEFORGE_ID) throw new Error("Set CURSEFORGE_ID (the CurseForge project ID)");
   if (!process.env.CURSEFORGE_TOKEN || !process.env.CURSEFORGE_ID) {
     throw new Error("CURSEFORGE_TOKEN and CURSEFORGE_ID are required");
   }
