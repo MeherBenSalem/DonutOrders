@@ -17,6 +17,12 @@
 #
 # Usage after a release build is ready:
 #   git tag v1.2.3 && git push --tags
+#
+# Runs only on a v*.*.* tag or by hand; a push to main never releases anything.
+# Same-day guard (NightBeam convention): scripts/same_day_guard.mjs stops the run if this plugin already had a
+# release today (Africa/Tunis day), on CurseForge or in an earlier Publish run of this repo. It runs first and again
+# right before the upload; a dry run only reports. It needs CURSEFORGE_ID (variable) and CURSEFORGE_API_KEY (secret).
+# Prove it first: gh workflow run publish.yml -f version=<version> -f dry_run=true
 
 name: Publish
 
@@ -38,13 +44,35 @@ on:
         required: false
         default: "both"
 
+# One Publish at a time per repo, so two runs can't both pass the same-day guard.
+concurrency:
+  group: publish-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Same-day guard
+        env:
+          CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PUBLISH_WORKFLOW: publish.yml
+          UPLOAD_STEP: Upload Modrinth + CurseForge (one version per jar)|Upload CurseForge|Upload Modrinth + CurseForge
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          node --test scripts/same_day_guard.test.mjs
+          node scripts/same_day_guard.mjs
 
       - name: Resolve version
         id: ver
@@ -187,9 +215,16 @@ jobs:
           printf '%s\n' "${JARS[@]}" >> "$GITHUB_OUTPUT"
           echo "$EOF" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+      - name: Same-day guard (again, right before upload)
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PUBLISH_WORKFLOW: publish.yml
+          UPLOAD_STEP: Upload Modrinth + CurseForge (one version per jar)|Upload CurseForge|Upload Modrinth + CurseForge
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/same_day_guard.mjs
 
       - name: Upload Modrinth + CurseForge (one version per jar)
         if: ${{ inputs.dry_run != 'true' }}

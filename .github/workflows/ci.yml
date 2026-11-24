@@ -1,9 +1,15 @@
+# NightBeam plugin CI: unit tests, the plugin.yml / bStats / Java 17 check, and smoke boots on real servers
+# (Paper 1.20.1, Paper 26.3 and the newest Folia). The full gameplay matrix with network clients is smoke.yml (manual).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -11,8 +17,6 @@ jobs:
     strategy:
       matrix:
         java: ["17", "21"]
-    permissions:
-      contents: read
     services:
       mysql:
         image: mysql:8.4
@@ -40,3 +44,83 @@ jobs:
         run: |
           python3 tools/messages/extract.py
           git diff --exit-code src/main/resources/messages.yml
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Publisher script tests (same-day guard)
+        run: node --test scripts/*.test.mjs
+      - name: Build plugin jar
+        run: |
+          mvn -B -q -DskipTests package
+          VERSION=$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Check plugin.yml, bStats ID and Java 17 bytecode
+        run: python3 scripts/check_plugin_yml.py --jar "target/DonutOrders-${VERSION}.jar"
+      - name: Build smoke fixture (in-memory Vault economy)
+        run: mvn -B -q -f tools/smoke/fixture/pom.xml package -Ddonutorders.version="$VERSION" -Ddonutorders.jar="$PWD/target/DonutOrders-$VERSION.jar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-jar
+          path: |
+            target/DonutOrders-*.jar
+            tools/smoke/fixture/target/OrderLabFixture.jar
+          if-no-files-found: error
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Paper 1.20.1
+            project: paper
+            version: "1.20.1"
+            java: "17"
+            economy: https://github.com/MilkBowl/Vault/releases/download/1.7.3/Vault.jar
+          - name: Paper 26.3
+            project: paper
+            version: "26.3"
+            java: "25"
+            economy: modrinth:vaultunlocked
+          - name: Folia (newest)
+            project: folia
+            version: latest
+            java: "25"
+            economy: modrinth:vaultunlocked
+    name: Smoke ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-jar
+          path: artifact
+      - uses: actions/setup-java@v4
+        id: java
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Boot ${{ matrix.name }}
+        env:
+          JAVA_BIN: ${{ steps.java.outputs.path }}/bin/java
+        run: |
+          JAR=$(ls artifact/target/DonutOrders-*.jar | head -1)
+          scripts/smoke_boot.sh ${{ matrix.project }} ${{ matrix.version }} "$JAR" \
+            artifact/tools/smoke/fixture/target/OrderLabFixture.jar ${{ matrix.economy }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-log-${{ matrix.project }}-${{ matrix.version }}
+          path: build/smoke/*/server.log
+          if-no-files-found: ignore

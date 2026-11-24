@@ -4,6 +4,8 @@ main: io.nightbeam.donutorders.DonutOrdersPlugin
 # Loads on 1.20.1 and every newer version up to 26.3.
 api-version: '1.20'
 folia-supported: true
+# bStats plugin ID (Bukkit ignores this key; CI checks it matches the code).
+bstats-id: 33559
 description: Buy orders for Paper and Folia. Players post what they want, others deliver it and get paid.
 author: NightBeam
 website: https://github.com/MeherBenSalem/DonutOrders

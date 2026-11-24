@@ -42,6 +42,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class DonutOrdersPlugin extends JavaPlugin {
 
+    /** bStats plugin ID (https://bstats.org/plugin/bukkit/DonutOrders/33559); also bstats-id in plugin.yml. */
+    static final int BSTATS_ID = 33559;
+
     private SchedulerAdapter scheduler;
     private MessageUtil messages;
     private FileConfiguration messagesConfig;
@@ -158,7 +161,7 @@ public final class DonutOrdersPlugin extends JavaPlugin {
     private void startMetrics() {
         if (!getConfig().getBoolean("metrics.enabled", true)) return;
         try {
-            Metrics metrics = new Metrics(this, 33559);
+            Metrics metrics = new Metrics(this, BSTATS_ID);
             metrics.addCustomChart(new SimplePie("server_software", () -> Bukkit.getServer().getName()));
             metrics.addCustomChart(new SimplePie("storage_type", () -> database.getDatabaseType().name()));
             metrics.addCustomChart(new SimplePie("seller_tax", () -> String.valueOf(getConfig().getBoolean("economy.seller-tax.enabled", false))));

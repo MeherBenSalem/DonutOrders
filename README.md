@@ -7,6 +7,10 @@ instantly. The money is held when the order is made, so every delivery is paid. 
 from the big SMP servers, rebuilt so items and money can never be lost or duplicated, with Vault or VaultUnlocked as
 the economy.
 
+Supported versions: Paper and Folia 1.20 to 26.3, Java 17+ (one jar for all of them).
+
+Metrics: bStats plugin ID 33559, https://bstats.org/plugin/bukkit/DonutOrders/33559
+
 ## Features
 
 - **The board** (`/orders`): 45 orders a page with the four familiar sorts (money per item, recently listed, most
@@ -160,8 +164,16 @@ Set `storage.type: MYSQL` on every server and point them at the same database (M
 mvn package            # target/DonutOrders-<version>.jar (Java 17), runs the unit tests
 ```
 
-`mvn test` runs the unit tests and the order book on native SQLite. Add
+`mvn test` runs the unit tests (JUnit 5 and MockBukkit) and the order book on native SQLite. Add
 `-Dorders.test.mysql.url=jdbc:mysql://localhost:3306/<db>` to run the order book on MySQL or MariaDB.
+
+CI (`.github/workflows/ci.yml`) runs the tests on every push to `main`, then
+`python3 scripts/check_plugin_yml.py` (api-version `'1.20'`, `folia-supported`, the bStats ID and Java 17 bytecode in
+the built jar) and a smoke boot on Paper 1.20.1, Paper 26.3 and the newest Folia with `scripts/smoke_boot.sh`:
+
+```bash
+scripts/smoke_boot.sh paper 26.3 target/DonutOrders-<version>.jar <economy plugin jars...>
+```
 
 [`tools/smoke`](tools/smoke/README.md) has the end-to-end checks:
 - The cross-version matrix on real Paper and Folia servers, with network clients, from 1.20.1 to 26.3.
